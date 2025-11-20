@@ -1,4 +1,4 @@
-package com.example.smartfit.ui.theme.addedit
+package com.example.smartfit.ui.addedit
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel

@@ -1,4 +1,4 @@
-package com.example.smartfit.ui.theme.addedit
+package com.example.smartfit.ui.addedit
 
 data class AddEditUiState (
     val type: String = "",

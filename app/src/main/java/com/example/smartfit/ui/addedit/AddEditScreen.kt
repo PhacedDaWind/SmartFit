@@ -1,4 +1,4 @@
-package com.example.smartfit.ui.theme.addedit
+package com.example.smartfit.ui.addedit
 
 import android.annotation.SuppressLint
 import androidx.compose.foundation.layout.Arrangement

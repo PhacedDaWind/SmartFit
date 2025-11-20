@@ -1,4 +1,4 @@
-package com.example.smartfit.ui.theme.logs
+package com.example.smartfit.ui.logs
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
