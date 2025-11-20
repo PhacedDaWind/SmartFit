@@ -3,6 +3,7 @@ package com.example.smartfit // Make sure this package is correct
 import android.app.Application
 import com.example.smartfit.data.ActivityRepository
 import com.example.smartfit.data.local.AppDatabase
+import com.example.smartfit.data.repository.UserPreferencesRepository
 
 /**
  * The Application class for SmartFit.
@@ -18,4 +19,8 @@ class SmartFitApplication : Application() {
     // Lazily create the repository using the database's DAO.
     // All ViewModels will share this single repository instance.
     val repository by lazy { ActivityRepository(database.activityLogDao()) }
+
+    val userPreferencesRepository by lazy {
+        UserPreferencesRepository(this)
+    }
 }

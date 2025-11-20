@@ -5,8 +5,8 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewmodel.CreationExtras
 import com.example.smartfit.data.ActivityRepository
-import com.example.smartfit.ui.theme.addedit.AddEditViewModel // You will create this ViewModel
-import com.example.smartfit.ui.theme.logs.ActivityLogViewModel  // You will create this ViewModel
+import com.example.smartfit.ui.addedit.AddEditViewModel // You will create this ViewModel
+import com.example.smartfit.ui.logs.ActivityLogViewModel  // You will create this ViewModel
 
 /**
  * Factory for manually creating ViewModels that have dependencies
