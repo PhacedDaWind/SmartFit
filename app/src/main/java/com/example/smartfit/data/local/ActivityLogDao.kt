@@ -8,10 +8,19 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ActivityLogDao {
-        /**
-         * Inserts a new log or updates an existing one if the primary key already exists.
-         * @param log The ActivityLog object to be inserted or updated.
-         */
+        @Query("SELECT * FROM activity_logs WHERE userId = :userId ORDER BY date DESC")
+        fun getLogsForUser(userId: Int): Flow<List<ActivityLog>>
+
+        @Query("""
+        SELECT 
+            strftime('%Y-%m-%d', date / 1000, 'unixepoch') as day, 
+            SUM(`values`) as total
+        FROM activity_logs
+        WHERE unit = :unit AND userId = :userId 
+        GROUP BY day
+        ORDER BY day DESC
+    """)
+        fun getDailySummaryForUser(unit: String, userId: Int): Flow<List<DailySummary>>
         @Upsert // This is a modern annotation that handles both Insert and Update
         suspend fun upsertLog(log: ActivityLog)
 

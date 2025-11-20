@@ -55,7 +55,9 @@ fun ActivityLogScreen(
     val application = LocalContext.current.applicationContext as SmartFitApplication
     // Create the ViewModel using the factory
     val viewModel: ActivityLogViewModel = viewModel(
-        factory = ViewModelFactory(application.repository)
+        factory = ViewModelFactory(application.repository,
+            application.userPreferencesRepository,
+            application.userRepository)
     )
 
     // --- State Collection ---
