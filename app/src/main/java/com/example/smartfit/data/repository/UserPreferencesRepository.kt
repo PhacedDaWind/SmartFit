@@ -8,24 +8,51 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
 // Creates a single instance of DataStore for the app
+// We use one DataStore named "user_settings" for everything
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "user_settings")
 
 class UserPreferencesRepository(private val context: Context) {
 
-    // This is the key we'll use to store the dark mode preference
-    private val IS_DARK_MODE_KEY = booleanPreferencesKey("is_dark_mode")
+    // --- KEYS ---
+    private companion object {
+        val IS_DARK_MODE_KEY = booleanPreferencesKey("is_dark_mode")
+        val CURRENT_USER_ID_KEY = intPreferencesKey("current_user_id")
+    }
 
-    // This Flow "flows" the current value to your UI.
-    // The UI will automatically update when this value changes.
+    // --- READ DATA (Flows) ---
+
+    // 1. Theme: Returns true if dark mode is enabled, false otherwise
     val isDarkTheme: Flow<Boolean> = context.dataStore.data
         .map { preferences ->
-            preferences[IS_DARK_MODE_KEY] ?: false // Default to false (light mode)
+            preferences[IS_DARK_MODE_KEY] ?: false // Default to Light Mode
         }
 
-    // This function saves the new setting
+    // 2. Auth: Returns the currently logged-in User ID (or null if logged out)
+    val currentUserId: Flow<Int?> = context.dataStore.data
+        .map { preferences ->
+            preferences[CURRENT_USER_ID_KEY]
+        }
+
+    // --- WRITE DATA (Functions) ---
+
+    // 1. Save Theme Preference
     suspend fun setDarkTheme(isDark: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[IS_DARK_MODE_KEY] = isDark
+        }
+    }
+
+    // 2. Save User Session (Call this on Login)
+    suspend fun saveCurrentUserId(id: Int) {
+        context.dataStore.edit { preferences ->
+            preferences[CURRENT_USER_ID_KEY] = id
+        }
+    }
+
+    // 3. Clear Session (Call this on Logout)
+    suspend fun clearSession() {
+        context.dataStore.edit { preferences ->
+            preferences.remove(CURRENT_USER_ID_KEY)
         }
     }
 }
