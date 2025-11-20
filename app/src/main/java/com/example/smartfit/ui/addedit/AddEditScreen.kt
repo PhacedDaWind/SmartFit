@@ -33,7 +33,6 @@ import com.example.smartfit.SmartFitApplication
 import com.example.smartfit.ui.theme.ViewModelFactory
 import kotlinx.coroutines.launch
 
-// We need the UiState data class here
 @OptIn(ExperimentalMaterial3Api::class)
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
@@ -42,8 +41,13 @@ fun AddEditScreen(
 ) {
     // --- ViewModel Setup ---
     val application = LocalContext.current.applicationContext as SmartFitApplication
+
     val viewModel: AddEditViewModel = viewModel(
-        factory = ViewModelFactory(application.repository)
+        factory = ViewModelFactory(
+            application.repository,                // 1. Activity Repository
+            application.userPreferencesRepository, // 2. User Preferences (The one you were missing)
+            application.userRepository             // 3. User Auth Repository
+        )
     )
 
     // --- State Collection ---
@@ -54,7 +58,7 @@ fun AddEditScreen(
         topBar = {
             TopAppBar(
                 // Title changes based on whether we are adding or editing
-                title = { Text(if (uiState.name.isBlank()) "Add Log" else "Edit Log") },
+                title = { Text(if (uiState.isEditing) "Edit Log" else "Add Log") },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
@@ -63,7 +67,7 @@ fun AddEditScreen(
                     IconButton(onClick = onNavigateUp) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back" // Accessibility
+                            contentDescription = "Back"
                         )
                     }
                 },
@@ -76,16 +80,15 @@ fun AddEditScreen(
                                 onNavigateUp() // Go back after saving
                             }
                         },
-                        enabled = uiState.isEntryValid // Enable button only if form is valid
+                        enabled = uiState.isEntryValid
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Check,
-                            contentDescription = "Save Log" // Accessibility
+                            imageVector = Icons.Filled.Check,
+                            contentDescription = "Save Log"
                         )
                     }
 
                     // --- Delete Button (only show if editing) ---
-                    // We check if the form is valid, which is a good sign it's an existing log
                     if (uiState.isEditing) {
                         IconButton(
                             onClick = {
@@ -96,8 +99,8 @@ fun AddEditScreen(
                             }
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Delete,
-                                contentDescription = "Delete Log" // Accessibility
+                                imageVector = Icons.Filled.Delete,
+                                contentDescription = "Delete Log"
                             )
                         }
                     }
@@ -140,7 +143,7 @@ private fun LogEntryForm(
             label = { Text("Activity Type (e.g., Workout, Food)") },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
-            isError = !uiState.isEntryValid && uiState.type.isBlank() // Example of error state
+            isError = !uiState.isEntryValid && uiState.type.isBlank()
         )
 
         // --- Activity Name Field ---
