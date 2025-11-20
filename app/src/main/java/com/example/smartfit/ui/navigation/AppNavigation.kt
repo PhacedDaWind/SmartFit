@@ -8,11 +8,15 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavType
 import androidx.navigation.compose.*
+import androidx.navigation.navArgument
 import com.example.smartfit.ui.profile.ProfileScreen
-
-import com.example.smartfit.ui.log.LogScreen
 import com.example.smartfit.ui.tips.TipsScreen
+
+// --- IMPORTS FOR YOUR SCREENS ---
+import com.example.smartfit.ui.logs.ActivityLogScreen
+import com.example.smartfit.ui.addedit.AddEditScreen
 
 @Composable
 fun AppNavigation() {
@@ -60,8 +64,34 @@ fun AppNavigation() {
             // Your Home Screen
             composable(Screen.Home.route) { HomeScreen() }
 
-            // Your Teammate's Log Screen
-            composable(Screen.ActivityLog.route) { LogScreen() }
+            // --- UPDATED: Your Log Screen ---
+            composable(Screen.ActivityLog.route) {
+                ActivityLogScreen(
+                    onLogClick = { logId ->
+                        // Navigate to the AddEditScreen with the specific log ID
+                        navController.navigate("add_edit_log/$logId")
+                    },
+                    onAddLogClick = {
+                        // Navigate to the AddEditScreen with ID -1 (signifying a new log)
+                        navController.navigate("add_edit_log/-1")
+                    }
+                )
+            }
+
+            // --- NEW: Your Add/Edit Screen Route ---
+            // This route is hidden from the bottom bar but accessible via navigation
+            composable(
+                route = "add_edit_log/{logId}",
+                arguments = listOf(
+                    navArgument("logId") { type = NavType.IntType }
+                )
+            ) {
+                AddEditScreen(
+                    onNavigateUp = {
+                        navController.popBackStack() // Go back to the previous screen
+                    }
+                )
+            }
 
             // Your Tips Screen
             composable(Screen.Tips.route) { TipsScreen() }
