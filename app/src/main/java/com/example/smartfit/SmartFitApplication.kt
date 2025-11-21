@@ -5,6 +5,7 @@ import com.example.smartfit.data.repository.ActivityRepository
 import com.example.smartfit.data.repository.UserRepository
 import com.example.smartfit.data.repository.UserPreferencesRepository
 import com.example.smartfit.data.local.AppDatabase
+import com.example.smartfit.data.repository.ChatRepository
 import com.example.smartfit.data.repository.StepSensorRepository
 
 class SmartFitApplication : Application() {
@@ -18,6 +19,8 @@ class SmartFitApplication : Application() {
     val userPreferencesRepository by lazy { UserPreferencesRepository(this) }
 
     val stepSensorRepository by lazy { StepSensorRepository(this) }
+
+    val chatRepository by lazy { ChatRepository() }
 
     override fun onCreate() {
         super.onCreate()

@@ -6,6 +6,7 @@ import androidx.lifecycle.viewmodel.CreationExtras
 import com.example.smartfit.SmartFitApplication
 import com.example.smartfit.ui.MainViewModel
 import com.example.smartfit.ui.profile.ProfileViewModel
+import com.example.smartfit.ui.tips.ChatViewModel
 
 object AppViewModelFactory : ViewModelProvider.Factory {
 
@@ -25,6 +26,10 @@ object AppViewModelFactory : ViewModelProvider.Factory {
             }
             modelClass.isAssignableFrom(MainViewModel::class.java) -> {
                 MainViewModel(prefsRepository) as T
+            }
+
+            modelClass.isAssignableFrom(ChatViewModel::class.java) -> {
+                ChatViewModel(application.chatRepository) as T
             }
 
             // Later, your teammate will add their ViewModels here:
