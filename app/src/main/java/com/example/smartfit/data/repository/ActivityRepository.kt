@@ -16,4 +16,16 @@ class ActivityRepository(
     fun getDailySummary(unit: String, userId: Int): Flow<List<DailySummary>> {
         return activityLogDao.getDailySummaryForUser(unit, userId)
     }
+
+    fun getLogsByType(userId: Int, type: String): Flow<List<ActivityLog>> {
+        return activityLogDao.getLogsForUserByType(userId, type)
+    }
+
+    fun getWorkouts(userId: Int): Flow<List<ActivityLog>> {
+        return activityLogDao.getWorkoutsForUser(userId)
+    }
+
+    fun getFoodLogs(userId: Int): Flow<List<ActivityLog>> {
+        return activityLogDao.getFoodLogsForUser(userId)
+    }
 }

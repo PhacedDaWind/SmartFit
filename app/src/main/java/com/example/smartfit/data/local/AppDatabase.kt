@@ -14,7 +14,7 @@ import androidx.room.RoomDatabase
     // 1. REGISTER ALL ENTITIES HERE
     entities = [ActivityLog::class, User::class],
     // 2. INCREMENT VERSION (Since we added a new table)
-    version = 2,
+    version = 6,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

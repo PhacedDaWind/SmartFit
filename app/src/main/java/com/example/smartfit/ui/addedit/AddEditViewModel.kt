@@ -25,11 +25,19 @@ class AddEditViewModel(
             viewModelScope.launch {
                 currentLog = activityRepository.getLogById(logId).first()
                 currentLog?.let { log ->
+                    // Logic: Check for "Food" (old data) OR "Food & Drinks" (new data)
+                    val cat = if (log.type == "Food" || log.type == "Food & Drinks") "Food & Drinks" else "Workout"
+                    val wType = if (log.type == "Strength") "Strength" else "Cardio"
+
                     _uiState.update {
                         it.copy(
-                            type = log.type, name = log.name,
-                            value = log.values.toString(), unit = log.unit,
-                            isEntryValid = true, isEditing = true
+                            category = cat,
+                            workoutType = wType,
+                            name = log.name,
+                            value = log.values.toString(),
+                            sets = log.sets.toString(),
+                            isEntryValid = true,
+                            isEditing = true
                         )
                     }
                 }
@@ -37,28 +45,66 @@ class AddEditViewModel(
         }
     }
 
-    // ... onTypeChange, onNameChange, etc ...
-    fun onTypeChange(v: String) { _uiState.update { it.copy(type = v, isEntryValid = validate(v, it.name, it.value)) } }
-    fun onNameChange(v: String) { _uiState.update { it.copy(name = v, isEntryValid = validate(it.type, v, it.value)) } }
-    fun onValueChange(v: String) { _uiState.update { it.copy(value = v, isEntryValid = validate(it.type, it.name, v)) } }
-    fun onUnitChange(v: String) { _uiState.update { it.copy(unit = v) } }
+    // --- Field Updates ---
+    fun onCategoryChange(cat: String) {
+        _uiState.update { it.copy(category = cat, isEntryValid = validateInput(cat, it.workoutType, it.name, it.value, it.sets)) }
+    }
 
+    fun onWorkoutTypeChange(wType: String) {
+        _uiState.update { it.copy(workoutType = wType, isEntryValid = validateInput(it.category, wType, it.name, it.value, it.sets)) }
+    }
+
+    fun onNameChange(v: String) {
+        _uiState.update { it.copy(name = v, isEntryValid = validateInput(it.category, it.workoutType, v, it.value, it.sets)) }
+    }
+
+    fun onValueChange(v: String) {
+        _uiState.update { it.copy(value = v, isEntryValid = validateInput(it.category, it.workoutType, it.name, v, it.sets)) }
+    }
+
+    fun onSetsChange(v: String) {
+        _uiState.update { it.copy(sets = v, isEntryValid = validateInput(it.category, it.workoutType, it.name, it.value, v)) }
+    }
+
+    // --- Save Logic ---
     fun saveLog() {
-        if (!validate()) return
+        if (!uiState.value.isEntryValid) return
+
         viewModelScope.launch {
-            val userId = userPreferencesRepository.currentUserId.first()
-            if (userId != null) {
-                activityRepository.upsertLog(
-                    ActivityLog(
-                        id = if (logId == null || logId == -1) 0 else logId,
-                        type = _uiState.value.type,
-                        name = _uiState.value.name,
-                        values = _uiState.value.value.toDoubleOrNull() ?: 0.0,
-                        unit = _uiState.value.unit,
-                        userId = userId // Save with User ID
-                    )
-                )
+            val userId = userPreferencesRepository.currentUserId.first() ?: return@launch
+            val state = _uiState.value
+
+            val finalType: String
+            val finalUnit: String
+            var finalSets = 0
+
+            // Check for the new category name
+            if (state.category == "Food & Drinks") {
+                finalType = "Food & Drinks"
+                finalUnit = "kcal"
+            } else {
+                // Workout
+                if (state.workoutType == "Cardio") {
+                    finalType = "Cardio"
+                    finalUnit = "mins"
+                } else {
+                    finalType = "Strength"
+                    finalUnit = "mins"
+                    finalSets = state.sets.toIntOrNull() ?: 0
+                }
             }
+
+            activityRepository.upsertLog(
+                ActivityLog(
+                    id = if (logId == null || logId == -1) 0 else logId,
+                    userId = userId,
+                    type = finalType,
+                    name = state.name,
+                    values = state.value.toDoubleOrNull() ?: 0.0,
+                    unit = finalUnit,
+                    sets = finalSets
+                )
+            )
         }
     }
 
@@ -68,7 +114,15 @@ class AddEditViewModel(
         }
     }
 
-    private fun validate(type: String = _uiState.value.type, name: String = _uiState.value.name, value: String = _uiState.value.value): Boolean {
-        return type.isNotBlank() && name.isNotBlank() && value.isNotBlank() && value.toDoubleOrNull() != null
+    private fun validateInput(cat: String, wType: String, name: String, value: String, sets: String): Boolean {
+        val basicCheck = name.isNotBlank() && value.isNotBlank() && value.toDoubleOrNull() != null
+
+        if (!basicCheck) return false
+
+        if (cat == "Workout" && wType == "Strength") {
+            return sets.isNotBlank() && sets.toIntOrNull() != null
+        }
+
+        return true
     }
 }

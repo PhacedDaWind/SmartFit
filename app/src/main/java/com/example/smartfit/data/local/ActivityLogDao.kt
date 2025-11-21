@@ -46,4 +46,12 @@ interface ActivityLogDao {
         @Query("SELECT * FROM activity_logs ORDER BY date DESC")
         fun getAllLogs(): Flow<List<ActivityLog>>
 
+        @Query("SELECT * FROM activity_logs WHERE userId = :userId AND type = :type ORDER BY date DESC")
+        fun getLogsForUserByType(userId: Int, type: String): Flow<List<ActivityLog>>
+
+        @Query("SELECT * FROM activity_logs WHERE userId = :userId AND type IN ('Cardio', 'Strength') ORDER BY date DESC")
+        fun getWorkoutsForUser(userId: Int): Flow<List<ActivityLog>>
+
+        @Query("SELECT * FROM activity_logs WHERE userId = :userId AND type = 'Food & Drinks' ORDER BY date DESC")
+        fun getFoodLogsForUser(userId: Int): Flow<List<ActivityLog>>
 }

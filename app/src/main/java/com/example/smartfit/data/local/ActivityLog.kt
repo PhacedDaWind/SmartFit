@@ -27,7 +27,6 @@ data class ActivityLog(
     val name: String,
     val values: Double,
     val unit: String,
-
-    // New Column: The ID of the user who owns this log
+    val sets: Int = 0,
     val userId: Int
 )

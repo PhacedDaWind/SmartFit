@@ -1,31 +1,19 @@
 package com.example.smartfit.ui.addedit
 
 import android.annotation.SuppressLint
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -37,89 +25,62 @@ import kotlinx.coroutines.launch
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
 fun AddEditScreen(
-    onNavigateUp: () -> Unit, // Navigation: Called to go back
+    onNavigateUp: () -> Unit,
 ) {
-    // --- ViewModel Setup ---
     val application = LocalContext.current.applicationContext as SmartFitApplication
-
     val viewModel: AddEditViewModel = viewModel(
         factory = ViewModelFactory(
-            application.repository,                // 1. Activity Repository
-            application.userPreferencesRepository, // 2. User Preferences (The one you were missing)
-            application.userRepository  ,
-            application.stepSensorRepository// 3. User Auth Repository
+            application.repository,
+            application.userPreferencesRepository,
+            application.userRepository,
+            application.stepSensorRepository
         )
     )
 
-    // --- State Collection ---
     val uiState by viewModel.uiState.collectAsState()
     val coroutineScope = rememberCoroutineScope()
 
     Scaffold(
         topBar = {
             TopAppBar(
-                // Title changes based on whether we are adding or editing
-                title = { Text(if (uiState.isEditing) "Edit Log" else "Add Log") },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                ),
+                title = { Text(if (uiState.isEditing) "Edit Activity" else "Add Activity") },
                 navigationIcon = {
                     IconButton(onClick = onNavigateUp) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
-                        )
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
                 actions = {
-                    // --- Save Button ---
                     IconButton(
                         onClick = {
                             coroutineScope.launch {
                                 viewModel.saveLog()
-                                onNavigateUp() // Go back after saving
+                                onNavigateUp()
                             }
                         },
                         enabled = uiState.isEntryValid
                     ) {
-                        Icon(
-                            imageVector = Icons.Filled.Check,
-                            contentDescription = "Save Log"
-                        )
+                        Icon(Icons.Filled.Check, contentDescription = "Save")
                     }
-
-                    // --- Delete Button (only show if editing) ---
                     if (uiState.isEditing) {
                         IconButton(
                             onClick = {
                                 coroutineScope.launch {
                                     viewModel.deleteLog()
-                                    onNavigateUp() // Go back after deleting
+                                    onNavigateUp()
                                 }
                             }
                         ) {
-                            Icon(
-                                imageVector = Icons.Filled.Delete,
-                                contentDescription = "Delete Log"
-                            )
+                            Icon(Icons.Filled.Delete, contentDescription = "Delete")
                         }
                     }
                 }
             )
         }
     ) { paddingValues ->
-        // --- UI Body (The Form) ---
         LogEntryForm(
             uiState = uiState,
-            onTypeChange = viewModel::onTypeChange,
-            onNameChange = viewModel::onNameChange,
-            onValueChange = viewModel::onValueChange,
-            onUnitChange = viewModel::onUnitChange,
-            modifier = Modifier
-                .padding(paddingValues)
-                .padding(16.dp)
-                .fillMaxSize()
+            viewModel = viewModel,
+            modifier = Modifier.padding(paddingValues).padding(16.dp).fillMaxSize()
         )
     }
 }
@@ -127,54 +88,111 @@ fun AddEditScreen(
 @Composable
 private fun LogEntryForm(
     uiState: AddEditUiState,
-    onTypeChange: (String) -> Unit,
-    onNameChange: (String) -> Unit,
-    onValueChange: (String) -> Unit,
-    onUnitChange: (String) -> Unit,
+    viewModel: AddEditViewModel,
     modifier: Modifier = Modifier
 ) {
-    Column(
-        modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        // --- Activity Type Field ---
-        OutlinedTextField(
-            value = uiState.type,
-            onValueChange = onTypeChange,
-            label = { Text("Activity Type (e.g., Workout, Food)") },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            isError = !uiState.isEntryValid && uiState.type.isBlank()
-        )
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(16.dp)) {
 
-        // --- Activity Name Field ---
+        // 1. Category Selection
+        Text("Category", style = MaterialTheme.typography.labelLarge)
+        Row(Modifier.fillMaxWidth()) {
+            RadioButtonGroup(
+                options = listOf("Workout", "Food & Drinks"), // <--- UPDATED
+                selectedOption = uiState.category,
+                onOptionSelected = { viewModel.onCategoryChange(it) }
+            )
+        }
+
+        // 2. Workout Type Selection (Only if Workout)
+        if (uiState.category == "Workout") {
+            Text("Workout Type", style = MaterialTheme.typography.labelLarge)
+            Row(Modifier.fillMaxWidth()) {
+                RadioButtonGroup(
+                    options = listOf("Cardio", "Strength"),
+                    selectedOption = uiState.workoutType,
+                    onOptionSelected = { viewModel.onWorkoutTypeChange(it) }
+                )
+            }
+        }
+
+        Divider()
+
+        // 3. Name Input
         OutlinedTextField(
             value = uiState.name,
-            onValueChange = onNameChange,
-            label = { Text("Name (e.g., Morning Run, Apple)") },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            isError = !uiState.isEntryValid && uiState.name.isBlank()
-        )
-
-        // --- Activity Value Field ---
-        OutlinedTextField(
-            value = uiState.value,
-            onValueChange = onValueChange,
-            label = { Text("Value (e.g., 30, 500, 150)") },
-            modifier = Modifier.fillMaxWidth(),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            singleLine = true,
-            isError = !uiState.isEntryValid && (uiState.value.isBlank() || uiState.value.toDoubleOrNull() == null)
-        )
-
-        // --- Activity Unit Field ---
-        OutlinedTextField(
-            value = uiState.unit,
-            onValueChange = onUnitChange,
-            label = { Text("Unit (e.g., minutes, kcal, steps)") },
+            onValueChange = { viewModel.onNameChange(it) },
+            // Check for new category name here
+            label = { Text(if (uiState.category == "Food & Drinks") "Item Name (e.g. Apple)" else "Exercise Name") },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true
         )
+
+        // 4. Dynamic Inputs
+        // Check for new category name here
+        if (uiState.category == "Food & Drinks") {
+            // --- FOOD & DRINKS: Calories ---
+            OutlinedTextField(
+                value = uiState.value,
+                onValueChange = { viewModel.onValueChange(it) },
+                label = { Text("Calories (kcal)") },
+                modifier = Modifier.fillMaxWidth(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                singleLine = true
+            )
+        } else {
+            // --- WORKOUT: Duration ---
+            OutlinedTextField(
+                value = uiState.value,
+                onValueChange = { viewModel.onValueChange(it) },
+                label = { Text("Duration (Minutes)") },
+                modifier = Modifier.fillMaxWidth(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                singleLine = true
+            )
+
+            // --- STRENGTH ONLY: Sets ---
+            if (uiState.workoutType == "Strength") {
+                OutlinedTextField(
+                    value = uiState.sets,
+                    onValueChange = { viewModel.onSetsChange(it) },
+                    label = { Text("Number of Sets") },
+                    modifier = Modifier.fillMaxWidth(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    singleLine = true
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun RadioButtonGroup(
+    options: List<String>,
+    selectedOption: String,
+    onOptionSelected: (String) -> Unit
+) {
+    Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+        options.forEach { text ->
+            Row(
+                Modifier
+                    .selectable(
+                        selected = (text == selectedOption),
+                        onClick = { onOptionSelected(text) },
+                        role = Role.RadioButton
+                    )
+                    .padding(horizontal = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                RadioButton(
+                    selected = (text == selectedOption),
+                    onClick = null
+                )
+                Text(
+                    text = text,
+                    style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier.padding(start = 8.dp)
+                )
+            }
+        }
     }
 }
