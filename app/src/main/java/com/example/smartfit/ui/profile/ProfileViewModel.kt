@@ -9,19 +9,31 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class ProfileViewModel(
-    private val prefsRepository: UserPreferencesRepository
+    private val userPreferencesRepository: UserPreferencesRepository
 ) : ViewModel() {
 
-    val isDarkTheme: StateFlow<Boolean> = prefsRepository.isDarkTheme
+    // --- State: Dark Mode ---
+    val isDarkMode: StateFlow<Boolean> = userPreferencesRepository.isDarkTheme
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = false
         )
 
-    fun setDarkTheme(isDark: Boolean) {
+    // --- Function: Toggle Theme ---
+    fun toggleTheme(isDark: Boolean) {
         viewModelScope.launch {
-            prefsRepository.setDarkTheme(isDark)
+            userPreferencesRepository.setDarkTheme(isDark)
+        }
+    }
+
+    // --- Function: Log Out ---
+    fun logout(onLogoutComplete: () -> Unit) {
+        viewModelScope.launch {
+            // 1. Clear the session from DataStore
+            userPreferencesRepository.clearSession()
+            // 2. Inform the UI to navigate away
+            onLogoutComplete()
         }
     }
 }

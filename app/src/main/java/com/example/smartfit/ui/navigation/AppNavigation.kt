@@ -1,6 +1,5 @@
 package com.example.smartfit.ui.navigation
 
-import HomeScreen
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -20,6 +19,7 @@ import com.example.smartfit.ui.tips.TipsScreen
 import com.example.smartfit.ui.auth.LoginScreen
 import com.example.smartfit.ui.auth.RegisterScreen
 import com.example.smartfit.ui.auth.ChangePasswordScreen
+import com.example.smartfit.ui.home.HomeScreen
 
 // --- ROUTE DEFINITIONS ---
 
@@ -114,7 +114,10 @@ fun AppNavigation() {
             composable(AuthRoutes.REGISTER) {
                 RegisterScreen(
                     onRegisterSuccess = {
-                        navController.popBackStack() // Go back to Login after registering
+                        navController.popBackStack()
+                    },
+                    onNavigateBack = { // <--- Handle the back arrow
+                        navController.popBackStack()
                     }
                 )
             }
@@ -122,14 +125,14 @@ fun AppNavigation() {
             composable(AuthRoutes.FORGOT_PASSWORD) {
                 ChangePasswordScreen(
                     onSuccess = {
-                        navController.popBackStack() // Go back to Login after changing password
+                        navController.popBackStack()
+                    },
+                    onNavigateBack = { // <--- Handle the back arrow
+                        navController.popBackStack()
                     }
                 )
             }
 
-            // ===========================
-            //      MAIN APP GRAPH
-            // ===========================
 
             composable(Screen.Home.route) { HomeScreen() }
 
@@ -163,7 +166,16 @@ fun AppNavigation() {
             composable(Screen.Tips.route) { TipsScreen() }
 
             // --- Profile Screen ---
-            composable(Screen.Profile.route) { ProfileScreen() }
+            composable(Screen.Profile.route) {
+                ProfileScreen(
+                    onLogout = {
+                        // Navigate back to Login and clear history
+                        navController.navigate(AuthRoutes.LOGIN) {
+                            popUpTo(0) { inclusive = true }
+                        }
+                    }
+                )
+            }
         }
     }
 }

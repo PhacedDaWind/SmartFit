@@ -31,7 +31,8 @@ fun LoginScreen(
         factory = ViewModelFactory(
             app.repository,
             app.userPreferencesRepository,
-            app.userRepository
+            app.userRepository,
+            app.stepSensorRepository
         )
     )
 

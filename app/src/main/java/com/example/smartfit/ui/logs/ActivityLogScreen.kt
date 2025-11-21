@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -57,7 +58,8 @@ fun ActivityLogScreen(
     val viewModel: ActivityLogViewModel = viewModel(
         factory = ViewModelFactory(application.repository,
             application.userPreferencesRepository,
-            application.userRepository)
+            application.userRepository,
+            application.stepSensorRepository)
     )
 
     // --- State Collection ---
@@ -71,7 +73,8 @@ fun ActivityLogScreen(
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                )
+                ),
+                windowInsets = WindowInsets(0.dp)
             )
         },
         floatingActionButton = {

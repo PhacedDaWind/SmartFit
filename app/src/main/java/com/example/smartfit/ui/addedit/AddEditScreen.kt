@@ -46,7 +46,8 @@ fun AddEditScreen(
         factory = ViewModelFactory(
             application.repository,                // 1. Activity Repository
             application.userPreferencesRepository, // 2. User Preferences (The one you were missing)
-            application.userRepository             // 3. User Auth Repository
+            application.userRepository  ,
+            application.stepSensorRepository// 3. User Auth Repository
         )
     )
 

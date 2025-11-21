@@ -5,6 +5,7 @@ import com.example.smartfit.data.repository.ActivityRepository
 import com.example.smartfit.data.repository.UserRepository
 import com.example.smartfit.data.repository.UserPreferencesRepository
 import com.example.smartfit.data.local.AppDatabase
+import com.example.smartfit.data.repository.StepSensorRepository
 
 class SmartFitApplication : Application() {
 
@@ -15,4 +16,12 @@ class SmartFitApplication : Application() {
     val userRepository by lazy { UserRepository(database.userDao()) }
 
     val userPreferencesRepository by lazy { UserPreferencesRepository(this) }
+
+    val stepSensorRepository by lazy { StepSensorRepository(this) }
+
+    override fun onCreate() {
+        super.onCreate()
+        // Force database open for App Inspection
+        database.openHelper.writableDatabase
+    }
 }
