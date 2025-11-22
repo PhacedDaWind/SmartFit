@@ -25,6 +25,7 @@ data class ActivityLog(
     val name: String,   // e.g., "Treadmill", "Bench Press"
     val values: Double, // e.g., Distance in km, or Weight in kg
     val unit: String,   // e.g., "km", "kg", "minutes"
-    val sets: Int = 0,  // Specific to strength training
+    val sets: Int = 0,  // Number of sets
+    val reps: Int = 0,  // NEW: Number of reps per set
     val userId: Int
 )

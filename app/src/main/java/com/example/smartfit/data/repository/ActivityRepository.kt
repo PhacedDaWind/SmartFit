@@ -21,6 +21,11 @@ class ActivityRepository(
     fun getWorkouts(userId: Int) = activityLogDao.getWorkoutsForUser(userId)
     fun getFoodLogs(userId: Int) = activityLogDao.getFoodLogsForUser(userId)
 
+    // --- MISSING FUNCTION (Add this!) ---
+    fun getLogsByType(userId: Int, type: String): Flow<List<ActivityLog>> {
+        return activityLogDao.getLogsForUserByType(userId, type)
+    }
+
     // Gets logs (workouts/food) for today
     fun getLogsFromDate(userId: Int, startTime: Long): Flow<List<ActivityLog>> {
         return activityLogDao.getLogsAfterTime(userId, startTime)
@@ -35,7 +40,6 @@ class ActivityRepository(
 
     // 2. Add Steps (Saves to 'daily_steps' ONLY)
     suspend fun addStepsToToday(userId: Int, newStepsToAdd: Int) {
-        // Get Midnight Timestamp for "Today"
         val midnight = Calendar.getInstance().apply {
             set(Calendar.HOUR_OF_DAY, 0)
             set(Calendar.MINUTE, 0)
@@ -43,17 +47,14 @@ class ActivityRepository(
             set(Calendar.MILLISECOND, 0)
         }.timeInMillis
 
-        // Check 'daily_steps' table, NOT 'activity_logs'
         val existingEntry = activityLogDao.getDailyStep(userId, midnight)
 
         if (existingEntry != null) {
-            // Update existing step count
             val updatedEntry = existingEntry.copy(
                 stepCount = existingEntry.stepCount + newStepsToAdd
             )
             activityLogDao.upsertDailyStep(updatedEntry)
         } else {
-            // Create new step entry for today
             val newEntry = DailyStep(
                 userId = userId,
                 date = midnight,

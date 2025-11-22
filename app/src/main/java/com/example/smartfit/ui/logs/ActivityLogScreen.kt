@@ -8,9 +8,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -31,6 +29,7 @@ import java.util.Locale
 fun ActivityLogScreen(
     onLogClick: (Int) -> Unit,
     onAddLogClick: () -> Unit,
+    initialFilter: String? = null
 ) {
     val application = LocalContext.current.applicationContext as SmartFitApplication
     val viewModel: ActivityLogViewModel = viewModel(
@@ -44,6 +43,12 @@ fun ActivityLogScreen(
 
     val logs by viewModel.allLogs.collectAsState()
     val selectedFilter by viewModel.filterType.collectAsState()
+
+    LaunchedEffect(initialFilter) {
+        if (initialFilter != null) {
+            viewModel.updateFilter(initialFilter)
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -69,11 +74,13 @@ fun ActivityLogScreen(
         Column(
             modifier = Modifier.fillMaxSize().padding(paddingValues)
         ) {
-            // --- FILTER TABS ---
-            val filters = listOf("All", "Workout", "Food & Drinks")
+            // --- UPDATED TABS ---
+            val filters = listOf("All", "Cardio", "Strength", "Food")
 
+            // CHANGED: Used 'TabRow' instead of 'ScrollableTabRow'
+            // This forces all 4 tabs to have exactly equal width and spacing.
             TabRow(
-                selectedTabIndex = filters.indexOf(selectedFilter),
+                selectedTabIndex = filters.indexOf(selectedFilter).coerceAtLeast(0),
                 containerColor = MaterialTheme.colorScheme.surface,
                 contentColor = MaterialTheme.colorScheme.primary
             ) {
@@ -81,14 +88,19 @@ fun ActivityLogScreen(
                     Tab(
                         selected = selectedFilter == title,
                         onClick = { viewModel.updateFilter(title) },
-                        text = { Text(title, fontWeight = if (selectedFilter == title) FontWeight.Bold else FontWeight.Normal) }
+                        text = {
+                            Text(
+                                text = title,
+                                fontWeight = if (selectedFilter == title) FontWeight.Bold else FontWeight.Normal,
+                                // Optional: Reduce text size slightly if it gets too crowded on small screens
+                                style = MaterialTheme.typography.labelLarge
+                            )
+                        }
                     )
                 }
             }
 
             // --- LOG LIST ---
-            // FIXED: Added .fillMaxWidth() here so the box stretches across the screen
-            // allowing Alignment.Center to work horizontally
             Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
                 if (logs.isEmpty()) {
                     Text(
@@ -148,8 +160,9 @@ private fun LogItem(
                 Text(text = log.type, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
             }
 
-            val detailsText = if (log.type == "Strength" && log.sets > 0) {
-                "${log.sets} Sets • ${formatValue(log.values)} ${log.unit}"
+            val detailsText = if (log.type == "Strength") {
+                val weightDisplay = if (log.values == 0.0) "Bodyweight" else "${formatValue(log.values)} kg"
+                "${log.sets} Sets x ${log.reps} Reps • $weightDisplay"
             } else {
                 "${formatValue(log.values)} ${log.unit}"
             }

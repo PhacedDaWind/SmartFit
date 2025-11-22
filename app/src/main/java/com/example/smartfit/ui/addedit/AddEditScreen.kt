@@ -126,27 +126,51 @@ private fun LogEntryForm(
             singleLine = true
         )
 
-        // 4. Value Input (Calories or Duration)
-        val valueLabel = if (uiState.category == "Food & Drinks") "Calories (kcal)" else "Duration (Minutes)"
+        // 4. Value Input (Weight/Duration/Calories)
+        val valueLabel = when {
+            uiState.category == "Food & Drinks" -> "Calories (kcal)"
+            uiState.workoutType == "Strength" -> "Weight (kg) - Optional"
+            else -> "Duration (Minutes)"
+        }
+
+        val placeholderText = if (uiState.workoutType == "Strength") "Leave blank for Bodyweight" else ""
+
         OutlinedTextField(
             value = uiState.value,
             onValueChange = { viewModel.onValueChange(it) },
             label = { Text(valueLabel) },
+            placeholder = { if(placeholderText.isNotEmpty()) Text(placeholderText) },
             modifier = Modifier.fillMaxWidth(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             singleLine = true
         )
 
-        // 5. Sets Input (Strength Only)
+        // 5. Sets & Reps Input (Strength Only)
         if (uiState.category == "Workout" && uiState.workoutType == "Strength") {
-            OutlinedTextField(
-                value = uiState.sets,
-                onValueChange = { viewModel.onSetsChange(it) },
-                label = { Text("Number of Sets") },
+            Row(
                 modifier = Modifier.fillMaxWidth(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                singleLine = true
-            )
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // Sets
+                OutlinedTextField(
+                    value = uiState.sets,
+                    onValueChange = { viewModel.onSetsChange(it) },
+                    label = { Text("Sets") },
+                    modifier = Modifier.weight(1f),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    singleLine = true
+                )
+
+                // Reps
+                OutlinedTextField(
+                    value = uiState.reps,
+                    onValueChange = { viewModel.onRepsChange(it) },
+                    label = { Text("Reps") },
+                    modifier = Modifier.weight(1f),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    singleLine = true
+                )
+            }
         }
     }
 }
