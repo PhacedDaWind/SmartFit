@@ -23,17 +23,14 @@ import com.example.smartfit.ui.home.HomeScreen
 
 // --- ROUTE DEFINITIONS ---
 
-// 1. Auth Routes (Login flows)
+// 1. Auth Routes
 object AuthRoutes {
     const val LOGIN = "login"
     const val REGISTER = "register"
     const val FORGOT_PASSWORD = "forgot_password"
 }
 
-// 2. Main App Screens (Bottom Navigation)
-// *** REMOVED: sealed class Screen *** // (It is now correctly read from your Screen.kt file)
-
-// 3. Other App Routes (Hidden from bottom bar)
+// 2. Other App Routes
 object OtherRoutes {
     const val ADD_EDIT = "add_edit_log"
     const val LOG_ID_ARG = "logId"
@@ -51,22 +48,30 @@ fun AppNavigation() {
         Screen.Profile,
     )
 
-    // Determine if we should show the bottom bar based on the current route
+    // Determine if we should show the bottom bar
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
     val currentRoute = currentDestination?.route
 
     // Show bottom bar ONLY if we are on one of the main screens
-    val showBottomBar = bottomNavItems.any { it.route == currentRoute }
+    // Note: We use startswith because ActivityLog route now has parameters (e.g. "activity_log?filter=Cardio")
+    val showBottomBar = bottomNavItems.any {
+        currentRoute?.startsWith(it.route) == true
+    }
 
     Scaffold(
         bottomBar = {
             if (showBottomBar) {
                 NavigationBar {
                     bottomNavItems.forEach { screen ->
+                        // Check if current route matches this screen (handling arguments)
+                        val isSelected = currentDestination?.hierarchy?.any {
+                            it.route?.startsWith(screen.route) == true
+                        } == true
+
                         NavigationBarItem(
                             label = { Text(screen.label) },
-                            selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
+                            selected = isSelected,
                             onClick = {
                                 navController.navigate(screen.route) {
                                     popUpTo(navController.graph.findStartDestination().id) {
@@ -86,7 +91,7 @@ fun AppNavigation() {
 
         NavHost(
             navController = navController,
-            startDestination = AuthRoutes.LOGIN, // <--- APP STARTS HERE
+            startDestination = AuthRoutes.LOGIN,
             modifier = Modifier.padding(innerPadding)
         ) {
 
@@ -97,7 +102,6 @@ fun AppNavigation() {
             composable(AuthRoutes.LOGIN) {
                 LoginScreen(
                     onLoginSuccess = {
-                        // Navigate to Home and clear the Login screen from history
                         navController.navigate(Screen.Home.route) {
                             popUpTo(AuthRoutes.LOGIN) { inclusive = true }
                         }
@@ -116,7 +120,7 @@ fun AppNavigation() {
                     onRegisterSuccess = {
                         navController.popBackStack()
                     },
-                    onNavigateBack = { // <--- Handle the back arrow
+                    onNavigateBack = {
                         navController.popBackStack()
                     }
                 )
@@ -127,18 +131,44 @@ fun AppNavigation() {
                     onSuccess = {
                         navController.popBackStack()
                     },
-                    onNavigateBack = { // <--- Handle the back arrow
+                    onNavigateBack = {
                         navController.popBackStack()
                     }
                 )
             }
 
+            // ===========================
+            //      MAIN APP GRAPH
+            // ===========================
 
-            composable(Screen.Home.route) { HomeScreen() }
+            // --- 1. Home Screen ---
+            composable(Screen.Home.route) {
+                HomeScreen(
+                    onWorkoutTypeClick = { type ->
+                        // Navigate to Activity Log passing the filter (Cardio or Strength)
+                        // Example: "activity_log?filter=Cardio"
+                        navController.navigate(Screen.ActivityLog.route + "?filter=$type")
+                    }
+                )
+            }
 
-            // --- Activity Log Screen ---
-            composable(Screen.ActivityLog.route) {
+            // --- 2. Activity Log Screen (Updated to accept Filter) ---
+            composable(
+                // Define route with optional parameter: "activity_log?filter={filter}"
+                route = Screen.ActivityLog.route + "?filter={filter}",
+                arguments = listOf(
+                    navArgument("filter") {
+                        type = NavType.StringType
+                        nullable = true
+                        defaultValue = null
+                    }
+                )
+            ) { backStackEntry ->
+                // Extract the argument
+                val filterArg = backStackEntry.arguments?.getString("filter")
+
                 ActivityLogScreen(
+                    initialFilter = filterArg, // Pass it to the screen
                     onLogClick = { logId ->
                         navController.navigate("${OtherRoutes.ADD_EDIT}/$logId")
                     },
@@ -148,7 +178,7 @@ fun AppNavigation() {
                 )
             }
 
-            // --- Add/Edit Screen ---
+            // --- 3. Add/Edit Screen ---
             composable(
                 route = "${OtherRoutes.ADD_EDIT}/{${OtherRoutes.LOG_ID_ARG}}",
                 arguments = listOf(
@@ -162,14 +192,13 @@ fun AppNavigation() {
                 )
             }
 
-            // --- Tips Screen ---
+            // --- 4. Tips Screen ---
             composable(Screen.Tips.route) { TipsScreen() }
 
-            // --- Profile Screen ---
+            // --- 5. Profile Screen ---
             composable(Screen.Profile.route) {
                 ProfileScreen(
                     onLogout = {
-                        // Navigate back to Login and clear history
                         navController.navigate(AuthRoutes.LOGIN) {
                             popUpTo(0) { inclusive = true }
                         }
