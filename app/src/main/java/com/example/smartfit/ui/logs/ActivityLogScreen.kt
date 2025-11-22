@@ -71,49 +71,56 @@ fun ActivityLogScreen(
             }
         }
     ) { paddingValues ->
-        Column(
-            modifier = Modifier.fillMaxSize().padding(paddingValues)
+        // 1. WRAPPER BOX
+        Box(
+            modifier = Modifier
+                .padding(paddingValues)
+                .fillMaxSize(),
+            contentAlignment = Alignment.TopCenter
         ) {
-            // --- UPDATED TABS ---
-            val filters = listOf("All", "Cardio", "Strength", "Food")
-
-            // CHANGED: Used 'TabRow' instead of 'ScrollableTabRow'
-            // This forces all 4 tabs to have exactly equal width and spacing.
-            TabRow(
-                selectedTabIndex = filters.indexOf(selectedFilter).coerceAtLeast(0),
-                containerColor = MaterialTheme.colorScheme.surface,
-                contentColor = MaterialTheme.colorScheme.primary
+            // 2. CONTENT COLUMN: Limited Width
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .widthIn(max = 600.dp) // <--- Tablet Fix
             ) {
-                filters.forEach { title ->
-                    Tab(
-                        selected = selectedFilter == title,
-                        onClick = { viewModel.updateFilter(title) },
-                        text = {
-                            Text(
-                                text = title,
-                                fontWeight = if (selectedFilter == title) FontWeight.Bold else FontWeight.Normal,
-                                // Optional: Reduce text size slightly if it gets too crowded on small screens
-                                style = MaterialTheme.typography.labelLarge
-                            )
-                        }
-                    )
+                // --- TABS ---
+                val filters = listOf("All", "Cardio", "Strength", "Food")
+                TabRow(
+                    selectedTabIndex = filters.indexOf(selectedFilter).coerceAtLeast(0),
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    contentColor = MaterialTheme.colorScheme.primary
+                ) {
+                    filters.forEach { title ->
+                        Tab(
+                            selected = selectedFilter == title,
+                            onClick = { viewModel.updateFilter(title) },
+                            text = {
+                                Text(
+                                    text = title,
+                                    fontWeight = if (selectedFilter == title) FontWeight.Bold else FontWeight.Normal,
+                                    style = MaterialTheme.typography.labelLarge
+                                )
+                            }
+                        )
+                    }
                 }
-            }
 
-            // --- LOG LIST ---
-            Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
-                if (logs.isEmpty()) {
-                    Text(
-                        text = "No logs found.",
-                        style = MaterialTheme.typography.bodyLarge,
-                        modifier = Modifier.align(Alignment.Center)
-                    )
-                } else {
-                    LogList(
-                        logs = logs,
-                        onLogClick = onLogClick,
-                        modifier = Modifier.fillMaxSize()
-                    )
+                // --- LOG LIST ---
+                Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                    if (logs.isEmpty()) {
+                        Text(
+                            text = "No logs found.",
+                            style = MaterialTheme.typography.bodyLarge,
+                            modifier = Modifier.align(Alignment.Center)
+                        )
+                    } else {
+                        LogList(
+                            logs = logs,
+                            onLogClick = onLogClick,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
                 }
             }
         }
@@ -121,11 +128,7 @@ fun ActivityLogScreen(
 }
 
 @Composable
-private fun LogList(
-    logs: List<ActivityLog>,
-    onLogClick: (Int) -> Unit,
-    modifier: Modifier = Modifier
-) {
+private fun LogList(logs: List<ActivityLog>, onLogClick: (Int) -> Unit, modifier: Modifier = Modifier) {
     LazyColumn(
         modifier = modifier,
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
@@ -138,11 +141,7 @@ private fun LogList(
 }
 
 @Composable
-private fun LogItem(
-    log: ActivityLog,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
+private fun LogItem(log: ActivityLog, onClick: () -> Unit, modifier: Modifier = Modifier) {
     Card(
         modifier = modifier.fillMaxWidth().clickable { onClick() },
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
@@ -152,21 +151,16 @@ private fun LogItem(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text(text = log.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Text(text = log.type, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
             }
-
             val detailsText = if (log.type == "Strength") {
                 val weightDisplay = if (log.values == 0.0) "Bodyweight" else "${formatValue(log.values)} kg"
                 "${log.sets} Sets x ${log.reps} Reps • $weightDisplay"
             } else {
                 "${formatValue(log.values)} ${log.unit}"
             }
-
             Text(text = detailsText, style = MaterialTheme.typography.bodyLarge)
             Text(text = formatDate(log.date), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }

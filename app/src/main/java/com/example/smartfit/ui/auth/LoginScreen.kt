@@ -1,14 +1,7 @@
 package com.example.smartfit.ui.auth
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import com.example.smartfit.ui.theme.ViewModelFactory
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -18,7 +11,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.smartfit.SmartFitApplication
-
+import com.example.smartfit.ui.theme.ViewModelFactory
 
 @Composable
 fun LoginScreen(
@@ -41,7 +34,6 @@ fun LoginScreen(
     val authState by viewModel.authState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    // Handle State Changes
     LaunchedEffect(authState) {
         when(authState) {
             is AuthState.Success -> onLoginSuccess()
@@ -54,30 +46,51 @@ fun LoginScreen(
     }
 
     Scaffold(snackbarHost = { SnackbarHost(snackbarHostState) }) { p ->
-        Column(
-            modifier = Modifier.padding(p).fillMaxSize().padding(32.dp),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
+        // 1. WRAPPER BOX: Centers content on screen
+        Box(
+            modifier = Modifier
+                .padding(p)
+                .fillMaxSize(),
+            contentAlignment = Alignment.Center // Center vertically and horizontally for Login
         ) {
-            Text("SmartFit Login", style = MaterialTheme.typography.headlineMedium)
-            Spacer(Modifier.height(32.dp))
+            // 2. CONTENT COLUMN: Limits width to 600dp
+            Column(
+                modifier = Modifier
+                    .padding(32.dp)
+                    .fillMaxWidth()
+                    .widthIn(max = 600.dp), // <--- PREVENTS STRETCHING
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text("SmartFit Login", style = MaterialTheme.typography.headlineMedium)
+                Spacer(Modifier.height(32.dp))
 
-            OutlinedTextField(value = username, onValueChange = { username = it }, label = { Text("Username") })
-            Spacer(Modifier.height(16.dp))
-            OutlinedTextField(
-                value = password,
-                onValueChange = { password = it },
-                label = { Text("Password") },
-                visualTransformation = PasswordVisualTransformation()
-            )
+                OutlinedTextField(
+                    value = username,
+                    onValueChange = { username = it },
+                    label = { Text("Username") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(Modifier.height(16.dp))
+                OutlinedTextField(
+                    value = password,
+                    onValueChange = { password = it },
+                    label = { Text("Password") },
+                    visualTransformation = PasswordVisualTransformation(),
+                    modifier = Modifier.fillMaxWidth()
+                )
 
-            Spacer(Modifier.height(24.dp))
-            Button(onClick = { viewModel.login(username, password) }, modifier = Modifier.fillMaxWidth()) {
-                Text("Login")
+                Spacer(Modifier.height(24.dp))
+                Button(
+                    onClick = { viewModel.login(username, password) },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Login")
+                }
+
+                TextButton(onClick = onNavigateToRegister) { Text("Don't have an account? Register") }
+                TextButton(onClick = onNavigateToForgot) { Text("Forgot/Change Password?") }
             }
-
-            TextButton(onClick = onNavigateToRegister) { Text("Don't have an account? Register") }
-            TextButton(onClick = onNavigateToForgot) { Text("Forgot/Change Password?") }
         }
     }
 }

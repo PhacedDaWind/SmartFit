@@ -20,14 +20,11 @@ import com.example.smartfit.ui.theme.ViewModelFactory
 @Composable
 fun RegisterScreen(
     onRegisterSuccess: () -> Unit,
-    onNavigateBack: () -> Unit // <--- 1. NEW PARAMETER
+    onNavigateBack: () -> Unit
 ) {
     val app = LocalContext.current.applicationContext as SmartFitApplication
     val viewModel: AuthViewModel = viewModel(
-        factory = ViewModelFactory(app.repository,
-            app.userPreferencesRepository,
-            app.userRepository,
-            app.stepSensorRepository)
+        factory = ViewModelFactory(app.repository, app.userPreferencesRepository, app.userRepository, app.stepSensorRepository)
     )
 
     var username by remember { mutableStateOf("") }
@@ -48,7 +45,6 @@ fun RegisterScreen(
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
-        // --- 2. ADD TOP BAR WITH BACK ARROW ---
         topBar = {
             TopAppBar(
                 title = { Text("Create Account") },
@@ -58,47 +54,54 @@ fun RegisterScreen(
                 ),
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
-                        )
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
                 windowInsets = WindowInsets(0.dp)
             )
         }
     ) { p ->
-        Column(
-            modifier = Modifier.padding(p).fillMaxSize().padding(32.dp),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
+        // 1. WRAPPER BOX
+        Box(
+            modifier = Modifier
+                .padding(p)
+                .fillMaxSize(),
+            contentAlignment = Alignment.TopCenter
         ) {
-            // Remove the old "Create Account" text since it's now in the TopBar
-
-            OutlinedTextField(
-                value = username,
-                onValueChange = { username = it },
-                label = { Text("Username") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true
-            )
-            Spacer(Modifier.height(16.dp))
-            OutlinedTextField(
-                value = password,
-                onValueChange = { password = it },
-                label = { Text("Password") },
-                visualTransformation = PasswordVisualTransformation(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true
-            )
-
-            Spacer(Modifier.height(24.dp))
-            Button(
-                onClick = { viewModel.register(username, password) },
-                modifier = Modifier.fillMaxWidth()
+            // 2. CONTENT COLUMN
+            Column(
+                modifier = Modifier
+                    .padding(32.dp)
+                    .fillMaxWidth()
+                    .widthIn(max = 600.dp), // <--- TABLET FIX
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text("Register")
+                OutlinedTextField(
+                    value = username,
+                    onValueChange = { username = it },
+                    label = { Text("Username") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+                Spacer(Modifier.height(16.dp))
+                OutlinedTextField(
+                    value = password,
+                    onValueChange = { password = it },
+                    label = { Text("Password") },
+                    visualTransformation = PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+
+                Spacer(Modifier.height(24.dp))
+                Button(
+                    onClick = { viewModel.register(username, password) },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Register")
+                }
             }
         }
     }

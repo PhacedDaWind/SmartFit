@@ -77,11 +77,21 @@ fun AddEditScreen(
             )
         }
     ) { paddingValues ->
-        LogEntryForm(
-            uiState = uiState,
-            viewModel = viewModel,
-            modifier = Modifier.padding(paddingValues).padding(16.dp).fillMaxSize()
-        )
+        Box(
+            modifier = Modifier
+                .padding(paddingValues)
+                .fillMaxSize(),
+            contentAlignment = Alignment.TopCenter
+        ) {
+            LogEntryForm(
+                uiState = uiState,
+                viewModel = viewModel,
+                modifier = Modifier
+                    .padding(16.dp)
+                    .fillMaxSize()
+                    .widthIn(max = 600.dp)
+            )
+        }
     }
 }
 
@@ -126,32 +136,30 @@ private fun LogEntryForm(
             singleLine = true
         )
 
-        // 4. Value Input (Weight/Duration/Calories)
+        // 4. Value Input
         val valueLabel = when {
             uiState.category == "Food & Drinks" -> "Calories (kcal)"
             uiState.workoutType == "Strength" -> "Weight (kg) - Optional"
             else -> "Duration (Minutes)"
         }
-
         val placeholderText = if (uiState.workoutType == "Strength") "Leave blank for Bodyweight" else ""
 
         OutlinedTextField(
             value = uiState.value,
             onValueChange = { viewModel.onValueChange(it) },
             label = { Text(valueLabel) },
-            placeholder = { if(placeholderText.isNotEmpty()) Text(placeholderText) },
+            placeholder = { if (placeholderText.isNotEmpty()) Text(placeholderText) },
             modifier = Modifier.fillMaxWidth(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             singleLine = true
         )
 
-        // 5. Sets & Reps Input (Strength Only)
+        // 5. Sets & Reps
         if (uiState.category == "Workout" && uiState.workoutType == "Strength") {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Sets
                 OutlinedTextField(
                     value = uiState.sets,
                     onValueChange = { viewModel.onSetsChange(it) },
@@ -160,8 +168,6 @@ private fun LogEntryForm(
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     singleLine = true
                 )
-
-                // Reps
                 OutlinedTextField(
                     value = uiState.reps,
                     onValueChange = { viewModel.onRepsChange(it) },
@@ -193,15 +199,8 @@ fun RadioButtonGroup(
                     .padding(horizontal = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                RadioButton(
-                    selected = (text == selectedOption),
-                    onClick = null
-                )
-                Text(
-                    text = text,
-                    style = MaterialTheme.typography.bodyLarge,
-                    modifier = Modifier.padding(start = 8.dp)
-                )
+                RadioButton(selected = (text == selectedOption), onClick = null)
+                Text(text = text, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(start = 8.dp))
             }
         }
     }
