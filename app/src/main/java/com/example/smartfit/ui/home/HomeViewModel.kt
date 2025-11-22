@@ -10,11 +10,10 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.util.Calendar
 
-// Holds all the stats for the Home Screen
 data class HomeStats(
     val steps: Int = 0,
-    val totalBurned: Double = 0.0, // Combined: (Steps * 0.04) + (Cardio * 8) + (Strength * 12)
-    val stepsCalories: Double = 0.0, // Just from walking
+    val stepGoal: Int = 2500, // Now dynamic based on user selection
+    val totalBurned: Double = 0.0,
     val foodCalories: Double = 0.0,
     val cardioMins: Double = 0.0,
     val strengthSets: Int = 0
@@ -26,82 +25,100 @@ class HomeViewModel(
     private val stepSensorRepository: StepSensorRepository
 ) : ViewModel() {
 
-    // UI State
     private val _stats = MutableStateFlow(HomeStats())
     val stats: StateFlow<HomeStats> = _stats.asStateFlow()
 
-    // Filter (Default is "Daily")
     private val _timeFilter = MutableStateFlow("Daily")
     val timeFilter: StateFlow<String> = _timeFilter.asStateFlow()
 
+    private var lastSensorValue = 0
+
     init {
         observeData()
+        observeSensorForSaving()
     }
 
     fun updateFilter(filter: String) {
         _timeFilter.value = filter
     }
 
+    // Updated: Saves the goal specifically for the currently logged-in user
+    fun updateStepGoal(newGoal: Int) {
+        viewModelScope.launch {
+            val userId = userPreferencesRepository.currentUserId.first()
+            if (userId != null) {
+                userPreferencesRepository.updateStepGoal(userId, newGoal)
+            }
+        }
+    }
+
+    // --- 1. SENSOR LOGIC (Saving Steps to DB) ---
+    private fun observeSensorForSaving() {
+        viewModelScope.launch {
+            val userId = userPreferencesRepository.currentUserId.filterNotNull().first()
+
+            stepSensorRepository.stepCount.collect { currentSensorValue ->
+                if (lastSensorValue == 0) {
+                    lastSensorValue = currentSensorValue
+                } else {
+                    val delta = currentSensorValue - lastSensorValue
+                    if (delta > 0) {
+                        activityRepository.addStepsToToday(userId, delta)
+                        lastSensorValue = currentSensorValue
+                    }
+                }
+            }
+        }
+    }
+
+    // --- 2. DISPLAY LOGIC (Reading DB + User Prefs) ---
     @OptIn(ExperimentalCoroutinesApi::class)
     private fun observeData() {
-        // We combine 3 streams: Live Steps, User ID, and Time Filter
-        combine(
-            stepSensorRepository.stepCount.onStart { emit(0) }, // Ensure it starts with 0
-            userPreferencesRepository.currentUserId,
-            _timeFilter
-        ) { steps, userId, filter ->
-            Triple(steps, userId, filter)
-        }.flatMapLatest { (sensorSteps, userId, filter) ->
-            if (userId != null) {
-                val startTime = getStartTime(filter)
+        // Step 1: Get the current User ID
+        userPreferencesRepository.currentUserId.flatMapLatest { userId ->
+            if (userId == null) {
+                flowOf(HomeStats()) // If no user, return empty stats
+            } else {
+                // Step 2: Combine Filter AND the User's specific Goal
+                combine(
+                    _timeFilter,
+                    userPreferencesRepository.getStepGoal(userId)
+                ) { filter, goal ->
+                    Triple(userId, filter, goal)
+                }.flatMapLatest { (uid, filter, goal) ->
 
-                // Fetch logs from DB for this user and time period
-                activityRepository.getTodayLogs(userId, startTime).map { logs ->
+                    val startTime = getStartTime(filter)
 
-                    // --- 1. Calculate Steps ---
-                    // If filter is Monthly, we ignore live sensor (show 0 or aggregate if you had history)
-                    // For Daily, we use the live sensor
-                    val displaySteps = if (filter == "Daily") sensorSteps else 0
-                    val stepBurn = displaySteps * 0.04
+                    // Step 3: Combine Activity Logs (Workouts) AND Steps (DailyStep table)
+                    combine(
+                        activityRepository.getLogsFromDate(uid, startTime),
+                        activityRepository.getStepsFromDate(uid, startTime)
+                    ) { logs, totalSteps ->
 
-                    // --- 2. Calculate Manual Logs ---
-                    var food = 0.0
-                    var cardioMins = 0.0
-                    var strengthSets = 0
-                    var workoutBurn = 0.0
+                        var food = 0.0
+                        var cardioMins = 0.0
+                        var strengthSets = 0
 
-                    logs.forEach { log ->
-                        when (log.type) {
-                            "Food & Drinks" -> {
-                                food += log.values
-                            }
-                            "Cardio" -> {
-                                cardioMins += log.values
-                                // ESTIMATE: 8 kcal per minute
-                                workoutBurn += (log.values * 8)
-                            }
-                            "Strength" -> {
-                                strengthSets += log.sets
-                                // ESTIMATE: 12 kcal per set
-                                workoutBurn += (log.sets * 12)
+                        logs.forEach { log ->
+                            when (log.type) {
+                                "Food & Drinks" -> food += log.values
+                                "Cardio" -> cardioMins += log.values
+                                "Strength" -> strengthSets += log.sets
                             }
                         }
+
+                        val stepBurn = totalSteps * 0.04
+
+                        HomeStats(
+                            steps = totalSteps,
+                            stepGoal = goal, // Pass the user's goal to the UI
+                            totalBurned = stepBurn,
+                            foodCalories = food,
+                            cardioMins = cardioMins,
+                            strengthSets = strengthSets
+                        )
                     }
-
-                    // --- 3. Combine for Totals ---
-                    val combinedBurn = stepBurn + workoutBurn
-
-                    HomeStats(
-                        steps = displaySteps,
-                        totalBurned = combinedBurn,
-                        stepsCalories = stepBurn,
-                        foodCalories = food,
-                        cardioMins = cardioMins,
-                        strengthSets = strengthSets
-                    )
                 }
-            } else {
-                flowOf(HomeStats()) // No user logged in
             }
         }.onEach {
             _stats.value = it
@@ -116,8 +133,10 @@ class HomeViewModel(
         calendar.set(Calendar.MILLISECOND, 0)
 
         if (filter == "Monthly") {
-            calendar.set(Calendar.DAY_OF_MONTH, 1) // Start of this month
+            calendar.set(Calendar.DAY_OF_MONTH, 1)
         }
         return calendar.timeInMillis
     }
+
+    fun simulateSteps(amount: Int) {}
 }

@@ -8,43 +8,19 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ActivityLogDao {
+        // --- SECTION 1: ACTIVITY LOGS (Workouts & Food Only) ---
+
         @Query("SELECT * FROM activity_logs WHERE userId = :userId ORDER BY date DESC")
         fun getLogsForUser(userId: Int): Flow<List<ActivityLog>>
 
-        @Query("""
-        SELECT 
-            strftime('%Y-%m-%d', date / 1000, 'unixepoch') as day, 
-            SUM(`values`) as total
-        FROM activity_logs
-        WHERE unit = :unit AND userId = :userId 
-        GROUP BY day
-        ORDER BY day DESC
-    """)
-        fun getDailySummaryForUser(unit: String, userId: Int): Flow<List<DailySummary>>
-        @Upsert // This is a modern annotation that handles both Insert and Update
-        suspend fun upsertLog(log: ActivityLog)
-
-        /**
-         * Deletes a specific log from the database.
-         * @param log The ActivityLog object to be deleted.
-         */
-        @Delete
-        suspend fun deleteLog(log: ActivityLog)
-
-        /**
-         * Retrieves a single activity log by its ID.
-         * @param id The primary key of the log to retrieve.
-         * @return A Flow emitting the ActivityLog, or null if not found.
-         */
         @Query("SELECT * FROM activity_logs WHERE id = :id")
         fun getLogById(id: Int): Flow<ActivityLog?>
 
-        /**
-         * Retrieves all activity logs from the database, ordered by date descending (newest first).
-         * @return A Flow emitting the list of all ActivityLog objects.
-         */
-        @Query("SELECT * FROM activity_logs ORDER BY date DESC")
-        fun getAllLogs(): Flow<List<ActivityLog>>
+        @Upsert
+        suspend fun upsertLog(log: ActivityLog)
+
+        @Delete
+        suspend fun deleteLog(log: ActivityLog)
 
         @Query("SELECT * FROM activity_logs WHERE userId = :userId AND type = :type ORDER BY date DESC")
         fun getLogsForUserByType(userId: Int, type: String): Flow<List<ActivityLog>>
@@ -55,17 +31,43 @@ interface ActivityLogDao {
         @Query("SELECT * FROM activity_logs WHERE userId = :userId AND type = 'Food & Drinks' ORDER BY date DESC")
         fun getFoodLogsForUser(userId: Int): Flow<List<ActivityLog>>
 
+        @Query("SELECT * FROM activity_logs WHERE userId = :userId AND date >= :startTime")
+        fun getLogsAfterTime(userId: Int, startTime: Long): Flow<List<ActivityLog>>
+
+
+        // --- SECTION 2: DAILY STEPS (New Separate Table) ---
+
+        // Check if a step entry exists for a specific day
+        @Query("SELECT * FROM daily_steps WHERE userId = :userId AND date = :date LIMIT 1")
+        suspend fun getDailyStep(userId: Int, date: Long): DailyStep?
+
+        // Insert or Update the step count
+        @Upsert
+        suspend fun upsertDailyStep(dailyStep: DailyStep)
+
+        // Get total steps starting from a specific date (used for Daily/Monthly view)
+        @Query("SELECT SUM(stepCount) FROM daily_steps WHERE userId = :userId AND date >= :startTime")
+        fun getStepsSinceDate(userId: Int, startTime: Long): Flow<Int?>
+
+
+        // --- SECTION 3: SUMMARIES (Unchanged) ---
+        @Query("""
+        SELECT 
+            strftime('%Y-%m-%d', date / 1000, 'unixepoch') as day, 
+            SUM(`values`) as total
+        FROM activity_logs
+        WHERE unit = :unit AND userId = :userId 
+        GROUP BY day ORDER BY day DESC
+    """)
+        fun getDailySummaryForUser(unit: String, userId: Int): Flow<List<DailySummary>>
+
         @Query("""
         SELECT 
             strftime('%Y-%m', date / 1000, 'unixepoch', 'localtime') as month, 
             SUM(`values`) as total
         FROM activity_logs
         WHERE unit = :unit AND userId = :userId
-        GROUP BY month
-        ORDER BY month DESC
+        GROUP BY month ORDER BY month DESC
     """)
         fun getMonthlySummaryForUser(unit: String, userId: Int): Flow<List<MonthlySummary>>
-
-        @Query("SELECT * FROM activity_logs WHERE userId = :userId AND date >= :startTime")
-        fun getLogsAfterTime(userId: Int, startTime: Long): Flow<List<ActivityLog>>
 }

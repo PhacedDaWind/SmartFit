@@ -24,8 +24,6 @@ import java.text.DecimalFormat
 @Composable
 fun HomeScreen() {
     val application = LocalContext.current.applicationContext as SmartFitApplication
-
-    // Pass ALL required repositories to the Factory
     val viewModel: HomeViewModel = viewModel(
         factory = ViewModelFactory(
             application.repository,
@@ -35,6 +33,7 @@ fun HomeScreen() {
         )
     )
 
+    // Observe stats (which now includes the user's saved stepGoal)
     val stats by viewModel.stats.collectAsState()
     val filter by viewModel.timeFilter.collectAsState()
     val scrollState = rememberScrollState()
@@ -47,7 +46,7 @@ fun HomeScreen() {
         verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
 
-        // --- HEADER ---
+        // --- HEADER (Title + Time Filters) ---
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -59,7 +58,6 @@ fun HomeScreen() {
                 fontWeight = FontWeight.Bold
             )
 
-            // Time Filter Toggle
             Row(
                 modifier = Modifier
                     .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(50))
@@ -89,7 +87,7 @@ fun HomeScreen() {
             }
         }
 
-        // --- 1. STEPS CARD ---
+        // --- 1. STEPS CARD (With Goal & Progress) ---
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
@@ -100,22 +98,55 @@ fun HomeScreen() {
             ) {
                 Text("Steps", style = MaterialTheme.typography.labelLarge)
 
+                // Current Step Count
                 Text(
                     text = "${stats.steps}",
                     style = MaterialTheme.typography.displayLarge,
                     fontWeight = FontWeight.Bold
                 )
 
+                // Progress Bar
+                // Calculate progress (0.0 to 1.0) based on current goal
+                val progress = (stats.steps.toFloat() / stats.stepGoal.toFloat()).coerceIn(0f, 1f)
+
+                Spacer(modifier = Modifier.height(8.dp))
+                LinearProgressIndicator(
+                    progress = { progress },
+                    modifier = Modifier.fillMaxWidth(0.7f).height(8.dp),
+                    color = MaterialTheme.colorScheme.primary,
+                    trackColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.3f),
+                    strokeCap = StrokeCap.Round,
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Goal Text
                 Text(
-                    text = "≈ ${formatDecimal(stats.stepsCalories)} kcal from walking",
+                    text = "Goal: ${stats.stepGoal} • ${formatDecimal(stats.totalBurned)} kcal",
                     style = MaterialTheme.typography.bodyMedium
                 )
 
-                if (filter == "Monthly") {
-                    Text(
-                        text = "(Live step count is for Today only)",
-                        style = MaterialTheme.typography.labelSmall
-                    )
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // --- GOAL SELECTOR CHIPS ---
+                Text("Set Goal:", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    val goals = listOf(1500, 2500, 4000)
+                    goals.forEach { goal ->
+                        FilterChip(
+                            selected = (stats.stepGoal == goal),
+                            onClick = { viewModel.updateStepGoal(goal) }, // Saves to DB
+                            label = { Text("$goal") },
+                            modifier = Modifier.padding(horizontal = 4.dp),
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = MaterialTheme.colorScheme.tertiary,
+                                selectedLabelColor = MaterialTheme.colorScheme.onTertiary
+                            )
+                        )
+                    }
                 }
             }
         }
@@ -127,17 +158,17 @@ fun HomeScreen() {
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Total Burned (Steps + Workouts)
+            // Burned (Steps Only)
             GaugeCard(
                 title = "Burned",
-                subtitle = "(Total)",
+                subtitle = "(Walking Only)",
                 current = stats.totalBurned,
-                visualMax = 1000.0,
+                visualMax = 500.0,
                 color = Color(0xFFFFA726), // Orange
                 modifier = Modifier.weight(1f)
             )
 
-            // Total Intake (Food)
+            // Intake (Food)
             GaugeCard(
                 title = "Intake",
                 subtitle = "(Food & Drink)",
@@ -157,7 +188,7 @@ fun HomeScreen() {
         ) {
             StatCard(
                 title = "Cardio",
-                value = "${formatDecimal(stats.cardioMins)}",
+                value = formatDecimal(stats.cardioMins),
                 unit = "Mins",
                 icon = "🏃",
                 modifier = Modifier.weight(1f)
@@ -171,8 +202,6 @@ fun HomeScreen() {
                 modifier = Modifier.weight(1f)
             )
         }
-
-        Spacer(modifier = Modifier.height(32.dp))
     }
 }
 
@@ -200,12 +229,14 @@ fun GaugeCard(
             Spacer(modifier = Modifier.height(16.dp))
 
             Box(contentAlignment = Alignment.Center) {
+                // Background Circle
                 CircularProgressIndicator(
                     progress = { 1f },
                     modifier = Modifier.size(80.dp),
                     color = MaterialTheme.colorScheme.surfaceVariant,
                     strokeWidth = 8.dp
                 )
+                // Foreground Progress Circle
                 CircularProgressIndicator(
                     progress = { progress },
                     modifier = Modifier.size(80.dp),

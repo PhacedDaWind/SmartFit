@@ -25,8 +25,8 @@ class AddEditViewModel(
             viewModelScope.launch {
                 currentLog = activityRepository.getLogById(logId).first()
                 currentLog?.let { log ->
-                    // Logic to determine UI state from DB data
-                    val cat = if (log.type == "Food" || log.type == "Food & Drinks") "Food & Drinks" else "Workout"
+                    val cat =
+                        if (log.type == "Food" || log.type == "Food & Drinks") "Food & Drinks" else "Workout"
                     val wType = if (log.type == "Strength") "Strength" else "Cardio"
 
                     _uiState.update {
@@ -35,7 +35,7 @@ class AddEditViewModel(
                             workoutType = wType,
                             name = log.name,
                             value = log.values.toString(),
-                            sets = log.sets.toString(),
+                            sets = if (wType == "Strength") log.sets.toString() else "",
                             isEntryValid = true,
                             isEditing = true
                         )
@@ -47,23 +47,58 @@ class AddEditViewModel(
 
     // --- Inputs ---
     fun onCategoryChange(cat: String) {
-        _uiState.update { it.copy(category = cat, isEntryValid = validateInput(cat, it.workoutType, it.name, it.value, it.sets)) }
+        _uiState.update {
+            it.copy(
+                category = cat,
+                isEntryValid = validateInput(cat, it.workoutType, it.name, it.value, it.sets)
+            )
+        }
     }
 
     fun onWorkoutTypeChange(wType: String) {
-        _uiState.update { it.copy(workoutType = wType, isEntryValid = validateInput(it.category, wType, it.name, it.value, it.sets)) }
+        _uiState.update {
+            // FIX: Clear 'sets' if switching to Cardio so it becomes effectively null/empty
+            val newSets = if (wType == "Cardio") "" else it.sets
+
+            it.copy(
+                workoutType = wType,
+                sets = newSets, // Apply cleared value
+                isEntryValid = validateInput(
+                    it.category,
+                    wType,
+                    it.name,
+                    it.value,
+                    newSets
+                ) // Validate with cleared value
+            )
+        }
     }
 
     fun onNameChange(v: String) {
-        _uiState.update { it.copy(name = v, isEntryValid = validateInput(it.category, it.workoutType, v, it.value, it.sets)) }
+        _uiState.update {
+            it.copy(
+                name = v,
+                isEntryValid = validateInput(it.category, it.workoutType, v, it.value, it.sets)
+            )
+        }
     }
 
     fun onValueChange(v: String) {
-        _uiState.update { it.copy(value = v, isEntryValid = validateInput(it.category, it.workoutType, it.name, v, it.sets)) }
+        _uiState.update {
+            it.copy(
+                value = v,
+                isEntryValid = validateInput(it.category, it.workoutType, it.name, v, it.sets)
+            )
+        }
     }
 
     fun onSetsChange(v: String) {
-        _uiState.update { it.copy(sets = v, isEntryValid = validateInput(it.category, it.workoutType, it.name, it.value, v)) }
+        _uiState.update {
+            it.copy(
+                sets = v,
+                isEntryValid = validateInput(it.category, it.workoutType, it.name, it.value, v)
+            )
+        }
     }
 
     // --- Save Logic ---
@@ -71,11 +106,9 @@ class AddEditViewModel(
         if (!uiState.value.isEntryValid) return
 
         viewModelScope.launch {
-            // Get Current User ID
             val userId = userPreferencesRepository.currentUserId.first() ?: return@launch
             val state = _uiState.value
 
-            // Determine final Type and Unit
             val finalType: String
             val finalUnit: String
             var finalSets = 0
@@ -87,6 +120,7 @@ class AddEditViewModel(
                 if (state.workoutType == "Cardio") {
                     finalType = "Cardio"
                     finalUnit = "mins"
+                    // finalSets stays 0 (which acts as null for Int)
                 } else {
                     finalType = "Strength"
                     finalUnit = "mins"
@@ -97,7 +131,7 @@ class AddEditViewModel(
             activityRepository.upsertLog(
                 ActivityLog(
                     id = if (logId == null || logId == -1) 0 else logId,
-                    userId = userId, // Save with User ID
+                    userId = userId,
                     type = finalType,
                     name = state.name,
                     values = state.value.toDoubleOrNull() ?: 0.0,
@@ -114,7 +148,13 @@ class AddEditViewModel(
         }
     }
 
-    private fun validateInput(cat: String, wType: String, name: String, value: String, sets: String): Boolean {
+    private fun validateInput(
+        cat: String,
+        wType: String,
+        name: String,
+        value: String,
+        sets: String
+    ): Boolean {
         val basicCheck = name.isNotBlank() && value.isNotBlank() && value.toDoubleOrNull() != null
         if (!basicCheck) return false
 

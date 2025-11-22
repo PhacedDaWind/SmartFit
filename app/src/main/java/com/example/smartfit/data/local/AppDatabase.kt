@@ -5,23 +5,17 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 
-/**
- * The main database class for the application.
- * This class defines the database configuration and serves as the main
- * access point for the underlying connection.
- */
 @Database(
-    // 1. REGISTER ALL ENTITIES HERE
-    entities = [ActivityLog::class, User::class],
-    // 2. INCREMENT VERSION (Since we added a new table)
-    version = 6,
+    // FIX: Add DailyStep::class to this list so Room knows to create the table
+    entities = [ActivityLog::class, User::class, DailyStep::class],
+    version = 7, // Increment this version number (e.g., from 6 to 7)
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
 
     // --- DAOs ---
     abstract fun activityLogDao(): ActivityLogDao
-    abstract fun userDao(): UserDao // <--- You must have this abstract function
+    abstract fun userDao(): UserDao
 
     companion object {
         @Volatile
@@ -34,7 +28,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "smartfit_database"
                 )
-                    // This deletes the old database if the version changes (simplifies development)
+                    // This allows the app to delete/recreate the DB when you change version
                     .fallbackToDestructiveMigration()
                     .build()
 

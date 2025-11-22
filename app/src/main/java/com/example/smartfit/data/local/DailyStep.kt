@@ -6,7 +6,8 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 
 @Entity(
-    tableName = "activity_logs",
+    tableName = "daily_steps",
+    // Link to User table (same as ActivityLog)
     foreignKeys = [
         ForeignKey(
             entity = User::class,
@@ -15,16 +16,14 @@ import androidx.room.PrimaryKey
             onDelete = ForeignKey.CASCADE
         )
     ],
+    // Index userId to quickly load a specific user's step history
     indices = [Index(value = ["userId"])]
 )
-data class ActivityLog(
+data class DailyStep(
     @PrimaryKey(autoGenerate = true)
     val id: Int = 0,
-    val date: Long = System.currentTimeMillis(),
-    val type: String,   // e.g., "Cardio", "Strength"
-    val name: String,   // e.g., "Treadmill", "Bench Press"
-    val values: Double, // e.g., Distance in km, or Weight in kg
-    val unit: String,   // e.g., "km", "kg", "minutes"
-    val sets: Int = 0,  // Specific to strength training
+    val date: Long = System.currentTimeMillis(), // Store the date of the step count
+    val stepCount: Int,     // The actual number of steps (e.g., 5000, 10000)
+    val caloriesBurned: Double = 0.0, // Optional: calculated based on steps
     val userId: Int
 )
