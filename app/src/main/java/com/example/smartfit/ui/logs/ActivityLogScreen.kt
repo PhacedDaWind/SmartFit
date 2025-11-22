@@ -4,7 +4,6 @@ import android.annotation.SuppressLint
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -20,7 +19,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.smartfit.SmartFitApplication
 import com.example.smartfit.data.local.ActivityLog
-import com.example.smartfit.data.local.DailySummary
 import com.example.smartfit.ui.theme.ViewModelFactory
 import java.text.DecimalFormat
 import java.text.SimpleDateFormat
@@ -53,8 +51,9 @@ fun ActivityLogScreen(
                 title = { Text("Activity Logs") },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                )
+                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                ),
+                windowInsets = WindowInsets(0.dp)
             )
         },
         floatingActionButton = {
@@ -88,7 +87,9 @@ fun ActivityLogScreen(
             }
 
             // --- LOG LIST ---
-            Box(modifier = Modifier.weight(1f)) {
+            // FIXED: Added .fillMaxWidth() here so the box stretches across the screen
+            // allowing Alignment.Center to work horizontally
+            Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
                 if (logs.isEmpty()) {
                     Text(
                         text = "No logs found.",
