@@ -1,6 +1,7 @@
 package com.example.smartfit.ui.home
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -22,7 +23,10 @@ import com.example.smartfit.ui.theme.ViewModelFactory
 import java.text.DecimalFormat
 
 @Composable
-fun HomeScreen() {
+fun HomeScreen(
+    // New callback: Passes "Cardio" or "Strength" when clicked
+    onWorkoutTypeClick: (String) -> Unit
+) {
     val application = LocalContext.current.applicationContext as SmartFitApplication
     val viewModel: HomeViewModel = viewModel(
         factory = ViewModelFactory(
@@ -33,7 +37,6 @@ fun HomeScreen() {
         )
     )
 
-    // Observe stats (which now includes the user's saved stepGoal)
     val stats by viewModel.stats.collectAsState()
     val filter by viewModel.timeFilter.collectAsState()
     val scrollState = rememberScrollState()
@@ -45,6 +48,9 @@ fun HomeScreen() {
             .verticalScroll(scrollState),
         verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
+
+        // ... (Header and Steps Card remain the same) ...
+        // ... (You can copy them from your previous file) ...
 
         // --- HEADER (Title + Time Filters) ---
         Row(
@@ -87,7 +93,7 @@ fun HomeScreen() {
             }
         }
 
-        // --- 1. STEPS CARD (With Goal & Progress) ---
+        // --- 1. STEPS CARD ---
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
@@ -97,16 +103,12 @@ fun HomeScreen() {
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text("Steps", style = MaterialTheme.typography.labelLarge)
-
-                // Current Step Count
                 Text(
                     text = "${stats.steps}",
                     style = MaterialTheme.typography.displayLarge,
                     fontWeight = FontWeight.Bold
                 )
 
-                // Progress Bar
-                // Calculate progress (0.0 to 1.0) based on current goal
                 val progress = (stats.steps.toFloat() / stats.stepGoal.toFloat()).coerceIn(0f, 1f)
 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -119,7 +121,6 @@ fun HomeScreen() {
                 )
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // Goal Text
                 Text(
                     text = "Goal: ${stats.stepGoal} • ${formatDecimal(stats.totalBurned)} kcal",
                     style = MaterialTheme.typography.bodyMedium
@@ -127,7 +128,7 @@ fun HomeScreen() {
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // --- GOAL SELECTOR CHIPS ---
+                // Goals
                 Text("Set Goal:", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -138,7 +139,7 @@ fun HomeScreen() {
                     goals.forEach { goal ->
                         FilterChip(
                             selected = (stats.stepGoal == goal),
-                            onClick = { viewModel.updateStepGoal(goal) }, // Saves to DB
+                            onClick = { viewModel.updateStepGoal(goal) },
                             label = { Text("$goal") },
                             modifier = Modifier.padding(horizontal = 4.dp),
                             colors = FilterChipDefaults.filterChipColors(
@@ -153,53 +154,53 @@ fun HomeScreen() {
 
         // --- 2. CALORIE GAUGES ---
         Text("Calories", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Burned (Steps Only)
             GaugeCard(
                 title = "Burned",
                 subtitle = "(Walking Only)",
                 current = stats.totalBurned,
                 visualMax = 500.0,
-                color = Color(0xFFFFA726), // Orange
+                color = Color(0xFFFFA726),
                 modifier = Modifier.weight(1f)
             )
-
-            // Intake (Food)
             GaugeCard(
                 title = "Intake",
                 subtitle = "(Food & Drink)",
                 current = stats.foodCalories,
                 visualMax = 2000.0,
-                color = Color(0xFF66BB6A), // Green
+                color = Color(0xFF66BB6A),
                 modifier = Modifier.weight(1f)
             )
         }
 
-        // --- 3. WORKOUT STATS ---
+        // --- 3. WORKOUT STATS (UPDATED) ---
         Text("Workouts", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
 
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            // CARDIO CARD
             StatCard(
                 title = "Cardio",
-                value = formatDecimal(stats.cardioMins),
-                unit = "Mins",
+                value = "${stats.cardioCount}", // Show Count
+                unit = "Sessions",
                 icon = "🏃",
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                onClick = { onWorkoutTypeClick("Cardio") } // Click Event
             )
 
+            // STRENGTH CARD
             StatCard(
                 title = "Strength",
-                value = "${stats.strengthSets}",
-                unit = "Sets",
+                value = "${stats.strengthCount}", // Show Count
+                unit = "Sessions",
                 icon = "💪",
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                onClick = { onWorkoutTypeClick("Strength") } // Click Event
             )
         }
     }
@@ -217,7 +218,6 @@ fun GaugeCard(
     modifier: Modifier = Modifier
 ) {
     val progress = (current / visualMax).toFloat().coerceIn(0f, 1f)
-
     Card(modifier = modifier, colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
         Column(
             modifier = Modifier.padding(16.dp).fillMaxWidth(),
@@ -225,18 +225,14 @@ fun GaugeCard(
         ) {
             Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             Text(subtitle, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary)
-
             Spacer(modifier = Modifier.height(16.dp))
-
             Box(contentAlignment = Alignment.Center) {
-                // Background Circle
                 CircularProgressIndicator(
                     progress = { 1f },
                     modifier = Modifier.size(80.dp),
                     color = MaterialTheme.colorScheme.surfaceVariant,
                     strokeWidth = 8.dp
                 )
-                // Foreground Progress Circle
                 CircularProgressIndicator(
                     progress = { progress },
                     modifier = Modifier.size(80.dp),
@@ -255,9 +251,20 @@ fun GaugeCard(
     }
 }
 
+// Updated StatCard to be Clickable
 @Composable
-fun StatCard(title: String, value: String, unit: String, icon: String, modifier: Modifier = Modifier) {
-    Card(modifier = modifier, colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)) {
+fun StatCard(
+    title: String,
+    value: String,
+    unit: String,
+    icon: String,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit = {} // Default empty lambda
+) {
+    Card(
+        modifier = modifier.clickable { onClick() }, // Make the card clickable
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+    ) {
         Column(
             modifier = Modifier.padding(16.dp).fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally

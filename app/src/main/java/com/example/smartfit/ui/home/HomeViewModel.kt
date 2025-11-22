@@ -10,13 +10,14 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.util.Calendar
 
+// 1. Updated Stats to hold COUNTS instead of sums
 data class HomeStats(
     val steps: Int = 0,
-    val stepGoal: Int = 2500, // Now dynamic based on user selection
+    val stepGoal: Int = 2500,
     val totalBurned: Double = 0.0,
     val foodCalories: Double = 0.0,
-    val cardioMins: Double = 0.0,
-    val strengthSets: Int = 0
+    val cardioCount: Int = 0,    // Changed from cardioMins
+    val strengthCount: Int = 0   // Changed from strengthSets
 )
 
 class HomeViewModel(
@@ -42,7 +43,6 @@ class HomeViewModel(
         _timeFilter.value = filter
     }
 
-    // Updated: Saves the goal specifically for the currently logged-in user
     fun updateStepGoal(newGoal: Int) {
         viewModelScope.launch {
             val userId = userPreferencesRepository.currentUserId.first()
@@ -52,7 +52,6 @@ class HomeViewModel(
         }
     }
 
-    // --- 1. SENSOR LOGIC (Saving Steps to DB) ---
     private fun observeSensorForSaving() {
         viewModelScope.launch {
             val userId = userPreferencesRepository.currentUserId.filterNotNull().first()
@@ -71,39 +70,35 @@ class HomeViewModel(
         }
     }
 
-    // --- 2. DISPLAY LOGIC (Reading DB + User Prefs) ---
     @OptIn(ExperimentalCoroutinesApi::class)
     private fun observeData() {
-        // Step 1: Get the current User ID
         userPreferencesRepository.currentUserId.flatMapLatest { userId ->
             if (userId == null) {
-                flowOf(HomeStats()) // If no user, return empty stats
+                flowOf(HomeStats())
             } else {
-                // Step 2: Combine Filter AND the User's specific Goal
                 combine(
                     _timeFilter,
                     userPreferencesRepository.getStepGoal(userId)
                 ) { filter, goal ->
                     Triple(userId, filter, goal)
                 }.flatMapLatest { (uid, filter, goal) ->
-
                     val startTime = getStartTime(filter)
 
-                    // Step 3: Combine Activity Logs (Workouts) AND Steps (DailyStep table)
                     combine(
                         activityRepository.getLogsFromDate(uid, startTime),
                         activityRepository.getStepsFromDate(uid, startTime)
                     ) { logs, totalSteps ->
 
                         var food = 0.0
-                        var cardioMins = 0.0
-                        var strengthSets = 0
+                        var cardioCount = 0   // Counter
+                        var strengthCount = 0 // Counter
 
                         logs.forEach { log ->
                             when (log.type) {
                                 "Food & Drinks" -> food += log.values
-                                "Cardio" -> cardioMins += log.values
-                                "Strength" -> strengthSets += log.sets
+                                // 2. Count the number of sessions
+                                "Cardio" -> cardioCount++
+                                "Strength" -> strengthCount++
                             }
                         }
 
@@ -111,11 +106,11 @@ class HomeViewModel(
 
                         HomeStats(
                             steps = totalSteps,
-                            stepGoal = goal, // Pass the user's goal to the UI
+                            stepGoal = goal,
                             totalBurned = stepBurn,
                             foodCalories = food,
-                            cardioMins = cardioMins,
-                            strengthSets = strengthSets
+                            cardioCount = cardioCount,     // Pass Count
+                            strengthCount = strengthCount  // Pass Count
                         )
                     }
                 }
