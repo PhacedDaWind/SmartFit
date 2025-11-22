@@ -1,5 +1,6 @@
 package com.example.smartfit.ui.profile
 
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.smartfit.data.repository.UserPreferencesRepository
@@ -20,10 +21,27 @@ class ProfileViewModel(
             initialValue = false
         )
 
+    // --- State: Profile Image Path ---
+    val profileImagePath: StateFlow<String?> = userPreferencesRepository.profileImagePath
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            null
+        )
+
     // --- Function: Toggle Theme ---
     fun toggleTheme(isDark: Boolean) {
         viewModelScope.launch {
             userPreferencesRepository.setDarkTheme(isDark)
+        }
+    }
+
+    // --- Function: Handle Image Selection ---
+    fun onImageSelected(uri: Uri?) {
+        uri?.let {
+            viewModelScope.launch {
+                userPreferencesRepository.saveProfileImage(it)
+            }
         }
     }
 

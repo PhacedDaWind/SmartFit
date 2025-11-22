@@ -15,7 +15,7 @@ sealed class Screen(
     val icon: ImageVector
 ) {
     object Home : Screen("home", "Home", Icons.Default.Home)
-    object ActivityLog : Screen("log", "Log", Icons.Default.Favorite) // Example icon
+    object ActivityLog : Screen("activity_log", "Log", Icons.Default.Favorite)
     object Tips : Screen("tips", "Tips", Icons.Default.Settings) // Example icon
     object Profile : Screen("profile", "Profile", Icons.Default.Person)
 }
