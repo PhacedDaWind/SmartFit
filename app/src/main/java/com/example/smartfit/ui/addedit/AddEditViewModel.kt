@@ -25,7 +25,7 @@ class AddEditViewModel(
             viewModelScope.launch {
                 currentLog = activityRepository.getLogById(logId).first()
                 currentLog?.let { log ->
-                    // Logic: Check for "Food" (old data) OR "Food & Drinks" (new data)
+                    // Logic to determine UI state from DB data
                     val cat = if (log.type == "Food" || log.type == "Food & Drinks") "Food & Drinks" else "Workout"
                     val wType = if (log.type == "Strength") "Strength" else "Cardio"
 
@@ -45,7 +45,7 @@ class AddEditViewModel(
         }
     }
 
-    // --- Field Updates ---
+    // --- Inputs ---
     fun onCategoryChange(cat: String) {
         _uiState.update { it.copy(category = cat, isEntryValid = validateInput(cat, it.workoutType, it.name, it.value, it.sets)) }
     }
@@ -71,19 +71,19 @@ class AddEditViewModel(
         if (!uiState.value.isEntryValid) return
 
         viewModelScope.launch {
+            // Get Current User ID
             val userId = userPreferencesRepository.currentUserId.first() ?: return@launch
             val state = _uiState.value
 
+            // Determine final Type and Unit
             val finalType: String
             val finalUnit: String
             var finalSets = 0
 
-            // Check for the new category name
             if (state.category == "Food & Drinks") {
                 finalType = "Food & Drinks"
                 finalUnit = "kcal"
             } else {
-                // Workout
                 if (state.workoutType == "Cardio") {
                     finalType = "Cardio"
                     finalUnit = "mins"
@@ -97,7 +97,7 @@ class AddEditViewModel(
             activityRepository.upsertLog(
                 ActivityLog(
                     id = if (logId == null || logId == -1) 0 else logId,
-                    userId = userId,
+                    userId = userId, // Save with User ID
                     type = finalType,
                     name = state.name,
                     values = state.value.toDoubleOrNull() ?: 0.0,
@@ -116,13 +116,11 @@ class AddEditViewModel(
 
     private fun validateInput(cat: String, wType: String, name: String, value: String, sets: String): Boolean {
         val basicCheck = name.isNotBlank() && value.isNotBlank() && value.toDoubleOrNull() != null
-
         if (!basicCheck) return false
 
         if (cat == "Workout" && wType == "Strength") {
             return sets.isNotBlank() && sets.toIntOrNull() != null
         }
-
         return true
     }
 }

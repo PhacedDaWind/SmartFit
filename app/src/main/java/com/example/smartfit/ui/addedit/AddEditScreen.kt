@@ -97,13 +97,13 @@ private fun LogEntryForm(
         Text("Category", style = MaterialTheme.typography.labelLarge)
         Row(Modifier.fillMaxWidth()) {
             RadioButtonGroup(
-                options = listOf("Workout", "Food & Drinks"), // <--- UPDATED
+                options = listOf("Workout", "Food & Drinks"),
                 selectedOption = uiState.category,
                 onOptionSelected = { viewModel.onCategoryChange(it) }
             )
         }
 
-        // 2. Workout Type Selection (Only if Workout)
+        // 2. Workout Type Selection
         if (uiState.category == "Workout") {
             Text("Workout Type", style = MaterialTheme.typography.labelLarge)
             Row(Modifier.fillMaxWidth()) {
@@ -121,46 +121,32 @@ private fun LogEntryForm(
         OutlinedTextField(
             value = uiState.name,
             onValueChange = { viewModel.onNameChange(it) },
-            // Check for new category name here
-            label = { Text(if (uiState.category == "Food & Drinks") "Item Name (e.g. Apple)" else "Exercise Name") },
+            label = { Text(if (uiState.category == "Food & Drinks") "Item Name" else "Exercise Name") },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true
         )
 
-        // 4. Dynamic Inputs
-        // Check for new category name here
-        if (uiState.category == "Food & Drinks") {
-            // --- FOOD & DRINKS: Calories ---
-            OutlinedTextField(
-                value = uiState.value,
-                onValueChange = { viewModel.onValueChange(it) },
-                label = { Text("Calories (kcal)") },
-                modifier = Modifier.fillMaxWidth(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                singleLine = true
-            )
-        } else {
-            // --- WORKOUT: Duration ---
-            OutlinedTextField(
-                value = uiState.value,
-                onValueChange = { viewModel.onValueChange(it) },
-                label = { Text("Duration (Minutes)") },
-                modifier = Modifier.fillMaxWidth(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                singleLine = true
-            )
+        // 4. Value Input (Calories or Duration)
+        val valueLabel = if (uiState.category == "Food & Drinks") "Calories (kcal)" else "Duration (Minutes)"
+        OutlinedTextField(
+            value = uiState.value,
+            onValueChange = { viewModel.onValueChange(it) },
+            label = { Text(valueLabel) },
+            modifier = Modifier.fillMaxWidth(),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            singleLine = true
+        )
 
-            // --- STRENGTH ONLY: Sets ---
-            if (uiState.workoutType == "Strength") {
-                OutlinedTextField(
-                    value = uiState.sets,
-                    onValueChange = { viewModel.onSetsChange(it) },
-                    label = { Text("Number of Sets") },
-                    modifier = Modifier.fillMaxWidth(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    singleLine = true
-                )
-            }
+        // 5. Sets Input (Strength Only)
+        if (uiState.category == "Workout" && uiState.workoutType == "Strength") {
+            OutlinedTextField(
+                value = uiState.sets,
+                onValueChange = { viewModel.onSetsChange(it) },
+                label = { Text("Number of Sets") },
+                modifier = Modifier.fillMaxWidth(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                singleLine = true
+            )
         }
     }
 }

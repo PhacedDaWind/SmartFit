@@ -54,4 +54,18 @@ interface ActivityLogDao {
 
         @Query("SELECT * FROM activity_logs WHERE userId = :userId AND type = 'Food & Drinks' ORDER BY date DESC")
         fun getFoodLogsForUser(userId: Int): Flow<List<ActivityLog>>
+
+        @Query("""
+        SELECT 
+            strftime('%Y-%m', date / 1000, 'unixepoch', 'localtime') as month, 
+            SUM(`values`) as total
+        FROM activity_logs
+        WHERE unit = :unit AND userId = :userId
+        GROUP BY month
+        ORDER BY month DESC
+    """)
+        fun getMonthlySummaryForUser(unit: String, userId: Int): Flow<List<MonthlySummary>>
+
+        @Query("SELECT * FROM activity_logs WHERE userId = :userId AND date >= :startTime")
+        fun getLogsAfterTime(userId: Int, startTime: Long): Flow<List<ActivityLog>>
 }
