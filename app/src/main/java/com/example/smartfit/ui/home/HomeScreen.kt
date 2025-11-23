@@ -6,10 +6,12 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -21,7 +23,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.smartfit.SmartFitApplication
 import com.example.smartfit.ui.theme.ViewModelFactory
 import java.text.DecimalFormat
+import java.util.Calendar
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     onWorkoutTypeClick: (String) -> Unit
@@ -38,34 +42,59 @@ fun HomeScreen(
 
     val stats by viewModel.stats.collectAsState()
     val filter by viewModel.timeFilter.collectAsState()
+    val dateLabel by viewModel.dateLabel.collectAsState()
     val scrollState = rememberScrollState()
 
-    // 1. WRAPPER BOX
+    // --- DATE PICKER STATE ---
+    var showDatePicker by remember { mutableStateOf(false) }
+    val datePickerState = rememberDatePickerState()
+
+    // Handle Date Selection
+    if (showDatePicker) {
+        DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    // Get selected date from picker and pass to ViewModel
+                    datePickerState.selectedDateMillis?.let {
+                        viewModel.updateDate(it)
+                    }
+                    showDatePicker = false
+                }) {
+                    Text("OK")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDatePicker = false }) { Text("Cancel") }
+            }
+        ) {
+            DatePicker(state = datePickerState)
+        }
+    }
+
+    // 1. TABLET WRAPPER
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background),
         contentAlignment = Alignment.TopCenter
     ) {
-        // 2. CONTENT COLUMN: Limited Width
+        // 2. CONTENT COLUMN
         Column(
             modifier = Modifier
                 .padding(16.dp)
-                .widthIn(max = 600.dp) // <--- Tablet Fix
+                .widthIn(max = 600.dp)
                 .verticalScroll(scrollState),
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
+
             // --- HEADER ---
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "Dashboard",
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold
-                )
+                Text("Dashboard", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
                 Row(
                     modifier = Modifier
                         .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(50))
@@ -75,10 +104,7 @@ fun HomeScreen(
                         selected = filter == "Daily",
                         onClick = { viewModel.updateFilter("Daily") },
                         label = { Text("Daily") },
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = MaterialTheme.colorScheme.primary,
-                            selectedLabelColor = MaterialTheme.colorScheme.onPrimary
-                        ),
+                        colors = FilterChipDefaults.filterChipColors(selectedContainerColor = MaterialTheme.colorScheme.primary, selectedLabelColor = MaterialTheme.colorScheme.onPrimary),
                         border = null
                     )
                     Spacer(modifier = Modifier.width(4.dp))
@@ -86,16 +112,51 @@ fun HomeScreen(
                         selected = filter == "Monthly",
                         onClick = { viewModel.updateFilter("Monthly") },
                         label = { Text("Monthly") },
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = MaterialTheme.colorScheme.primary,
-                            selectedLabelColor = MaterialTheme.colorScheme.onPrimary
-                        ),
+                        colors = FilterChipDefaults.filterChipColors(selectedContainerColor = MaterialTheme.colorScheme.primary, selectedLabelColor = MaterialTheme.colorScheme.onPrimary),
                         border = null
                     )
                 }
             }
 
-            // --- 1. STEPS CARD ---
+            // --- DATE NAVIGATOR (With Date Picker Trigger) ---
+            Card(
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(onClick = { viewModel.previousPeriod() }) {
+                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, "Previous")
+                    }
+
+                    // CLICKABLE DATE TEXT
+                    Row(
+                        modifier = Modifier
+                            .clickable { showDatePicker = true } // <--- Opens Picker
+                            .padding(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.DateRange, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = dateLabel,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+
+                    IconButton(onClick = { viewModel.nextPeriod() }) {
+                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, "Next")
+                    }
+                }
+            }
+
+            // --- STEPS CARD ---
+            // (Same as before)
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
@@ -105,11 +166,7 @@ fun HomeScreen(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text("Steps", style = MaterialTheme.typography.labelLarge)
-                    Text(
-                        text = "${stats.steps}",
-                        style = MaterialTheme.typography.displayLarge,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Text("${stats.steps}", style = MaterialTheme.typography.displayLarge, fontWeight = FontWeight.Bold)
                     val progress = (stats.steps.toFloat() / stats.stepGoal.toFloat()).coerceIn(0f, 1f)
                     Spacer(modifier = Modifier.height(8.dp))
                     LinearProgressIndicator(
@@ -120,12 +177,10 @@ fun HomeScreen(
                         strokeCap = StrokeCap.Round,
                     )
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "Goal: ${stats.stepGoal} • ${formatDecimal(stats.totalBurned)} kcal",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
+                    Text("Goal: ${stats.stepGoal} • ${formatDecimal(stats.totalBurned)} kcal", style = MaterialTheme.typography.bodyMedium)
                     Spacer(modifier = Modifier.height(16.dp))
-                    // Goals
+
+                    // Goal Chips
                     Text("Set Goal:", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -139,17 +194,14 @@ fun HomeScreen(
                                 onClick = { viewModel.updateStepGoal(goal) },
                                 label = { Text("$goal") },
                                 modifier = Modifier.padding(horizontal = 4.dp),
-                                colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = MaterialTheme.colorScheme.tertiary,
-                                    selectedLabelColor = MaterialTheme.colorScheme.onTertiary
-                                )
+                                colors = FilterChipDefaults.filterChipColors(selectedContainerColor = MaterialTheme.colorScheme.tertiary, selectedLabelColor = MaterialTheme.colorScheme.onTertiary)
                             )
                         }
                     }
                 }
             }
 
-            // --- 2. CALORIE GAUGES ---
+            // --- CALORIES ---
             Text("Calories", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -173,7 +225,7 @@ fun HomeScreen(
                 )
             }
 
-            // --- 3. WORKOUT STATS ---
+            // --- WORKOUTS ---
             Text("Workouts", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
             Row(
                 modifier = Modifier.fillMaxWidth(),

@@ -70,4 +70,11 @@ interface ActivityLogDao {
         GROUP BY month ORDER BY month DESC
     """)
         fun getMonthlySummaryForUser(unit: String, userId: Int): Flow<List<MonthlySummary>>
+
+        @Query("SELECT * FROM activity_logs WHERE userId = :userId AND date >= :startDate AND date < :endDate ORDER BY date DESC")
+        fun getLogsBetween(userId: Int, startDate: Long, endDate: Long): Flow<List<ActivityLog>>
+
+        // NEW: Get steps between two dates
+        @Query("SELECT SUM(stepCount) FROM daily_steps WHERE userId = :userId AND date >= :startDate AND date < :endDate")
+        fun getStepsBetween(userId: Int, startDate: Long, endDate: Long): Flow<Int?>
 }

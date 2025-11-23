@@ -71,4 +71,10 @@ class ActivityRepository(
     fun getMonthlySummary(unit: String, userId: Int): Flow<List<MonthlySummary>> {
         return activityLogDao.getMonthlySummaryForUser(unit, userId)
     }
+
+    fun getLogsBetween(userId: Int, start: Long, end: Long) =
+        activityLogDao.getLogsBetween(userId, start, end)
+
+    fun getStepsBetween(userId: Int, start: Long, end: Long) =
+        activityLogDao.getStepsBetween(userId, start, end).map { it ?: 0 }
 }
