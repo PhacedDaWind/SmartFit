@@ -5,7 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.smartfit.data.repository.ActivityRepository
 import com.example.smartfit.data.repository.StepSensorRepository
 import com.example.smartfit.data.repository.UserPreferencesRepository
-import com.example.smartfit.data.repository.UserRepository // <--- New Import
+import com.example.smartfit.data.repository.UserRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -15,7 +15,7 @@ import java.util.Locale
 
 data class HomeStats(
     val steps: Int = 0,
-    val stepGoal: Int = 2500,
+    val stepGoal: Int = 0, // Default 0 until loaded
     val totalBurned: Double = 0.0,
     val foodCalories: Double = 0.0,
     val cardioCount: Int = 0,
@@ -25,7 +25,7 @@ data class HomeStats(
 class HomeViewModel(
     private val activityRepository: ActivityRepository,
     private val userPreferencesRepository: UserPreferencesRepository,
-    private val userRepository: UserRepository, // <--- Add UserRepository here
+    private val userRepository: UserRepository, // Needed for Goal
     private val stepSensorRepository: StepSensorRepository
 ) : ViewModel() {
 
@@ -40,7 +40,6 @@ class HomeViewModel(
     private val _dateLabel = MutableStateFlow("Today")
     val dateLabel: StateFlow<String> = _dateLabel.asStateFlow()
 
-    // NEW: Stores the username
     private val _username = MutableStateFlow("User")
     val username: StateFlow<String> = _username.asStateFlow()
 
@@ -49,10 +48,9 @@ class HomeViewModel(
     init {
         observeData()
         observeSensorForSaving()
-        fetchUsername() // <--- Trigger fetching
+        fetchUsername()
     }
 
-    // NEW: Function to get username from DB
     private fun fetchUsername() {
         viewModelScope.launch {
             userPreferencesRepository.currentUserId.collect { userId ->
@@ -66,24 +64,21 @@ class HomeViewModel(
         }
     }
 
-    // ... (Rest of your existing functions: updateFilter, updateDate, etc.) ...
-    // ... (Copy them exactly as they were in the previous code) ...
-
-    fun updateFilter(filter: String) {
-        _timeFilter.value = filter
+    // --- Save Goal to Database ---
+    fun updateStepGoal(newGoal: Int) {
+        viewModelScope.launch {
+            val userId = userPreferencesRepository.currentUserId.first()
+            if (userId != null) {
+                userRepository.updateStepGoal(userId, newGoal)
+            }
+        }
     }
 
-    fun updateDate(newTimestamp: Long) {
-        _currentDate.value = newTimestamp
-    }
-
-    fun previousPeriod() {
-        _currentDate.value = moveDate(_currentDate.value, -1)
-    }
-
-    fun nextPeriod() {
-        _currentDate.value = moveDate(_currentDate.value, 1)
-    }
+    // --- Navigation Helpers ---
+    fun updateFilter(filter: String) { _timeFilter.value = filter }
+    fun updateDate(newTimestamp: Long) { _currentDate.value = newTimestamp }
+    fun previousPeriod() { _currentDate.value = moveDate(_currentDate.value, -1) }
+    fun nextPeriod() { _currentDate.value = moveDate(_currentDate.value, 1) }
 
     private fun moveDate(timestamp: Long, amount: Int): Long {
         val calendar = Calendar.getInstance()
@@ -93,38 +88,17 @@ class HomeViewModel(
         return calendar.timeInMillis
     }
 
-    fun updateStepGoal(newGoal: Int) {
-        viewModelScope.launch {
-            val userId = userPreferencesRepository.currentUserId.first()
-            if (userId != null) userPreferencesRepository.updateStepGoal(userId, newGoal)
-        }
-    }
-
-    private fun observeSensorForSaving() {
-        viewModelScope.launch {
-            val userId = userPreferencesRepository.currentUserId.filterNotNull().first()
-            stepSensorRepository.stepCount.collect { currentSensorValue ->
-                if (lastSensorValue == 0) lastSensorValue = currentSensorValue
-                else {
-                    val delta = currentSensorValue - lastSensorValue
-                    if (delta > 0) {
-                        activityRepository.addStepsToToday(userId, delta)
-                        lastSensorValue = currentSensorValue
-                    }
-                }
-            }
-        }
-    }
-
+    // --- Main Data Logic ---
     @OptIn(ExperimentalCoroutinesApi::class)
     private fun observeData() {
         userPreferencesRepository.currentUserId.flatMapLatest { userId ->
             if (userId == null) {
                 flowOf(HomeStats())
             } else {
+                // Combine Filter, Goal (from DB), Date
                 combine(
                     _timeFilter,
-                    userPreferencesRepository.getStepGoal(userId),
+                    userRepository.getStepGoalStream(userId), // Reading from User Table
                     _currentDate
                 ) { filter, goal, date ->
                     Triple(filter, goal, date)
@@ -149,13 +123,25 @@ class HomeViewModel(
                             }
                         }
                         val stepBurn = totalSteps * 0.04
-                        HomeStats(totalSteps, goal, stepBurn, food, cardioCount, strengthCount)
+
+                        HomeStats(
+                            steps = totalSteps,
+                            stepGoal = goal,
+                            totalBurned = stepBurn,
+                            foodCalories = food,
+                            cardioCount = cardioCount,
+                            strengthCount = strengthCount
+                        )
                     }
                 }
             }
-        }.onEach { _stats.value = it }.launchIn(viewModelScope)
+        }.onEach {
+            _stats.value = it
+        }.launchIn(viewModelScope)
     }
 
+    // ... (Rest of helpers: getTimeRange, updateDateLabel, observeSensorForSaving, simulateSteps) ...
+    // Copy these from your previous version or ask if you need them again!
     private fun getTimeRange(filter: String, date: Long): Pair<Long, Long> {
         val calendar = Calendar.getInstance()
         calendar.timeInMillis = date
@@ -183,5 +169,20 @@ class HomeViewModel(
         if (filter == "Daily" && isToday) _dateLabel.value = "Today" else _dateLabel.value = sdf.format(startTime)
     }
 
+    private fun observeSensorForSaving() {
+        viewModelScope.launch {
+            val userId = userPreferencesRepository.currentUserId.filterNotNull().first()
+            stepSensorRepository.stepCount.collect { currentSensorValue ->
+                if (lastSensorValue == 0) lastSensorValue = currentSensorValue
+                else {
+                    val delta = currentSensorValue - lastSensorValue
+                    if (delta > 0) {
+                        activityRepository.addStepsToToday(userId, delta)
+                        lastSensorValue = currentSensorValue
+                    }
+                }
+            }
+        }
+    }
     fun simulateSteps(amount: Int) {}
 }

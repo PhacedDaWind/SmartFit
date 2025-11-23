@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface UserDao {
@@ -19,4 +20,10 @@ interface UserDao {
     // UPDATED: Update by userId (Primary Key) instead of username
     @Query("UPDATE users SET password = :newPassword WHERE userId = :userId")
     suspend fun updatePassword(userId: Int, newPassword: String)
+
+    @Query("UPDATE users SET stepGoal = :goal WHERE userId = :userId")
+    suspend fun updateStepGoal(userId: Int, goal: Int)
+
+    @Query("SELECT stepGoal FROM users WHERE userId = :userId")
+    fun getStepGoal(userId: Int): Flow<Int?>
 }

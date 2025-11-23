@@ -2,6 +2,8 @@ package com.example.smartfit.data.repository
 
 import com.example.smartfit.data.local.User
 import com.example.smartfit.data.local.UserDao
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 
 class UserRepository(private val userDao: UserDao) {
 
@@ -22,18 +24,26 @@ class UserRepository(private val userDao: UserDao) {
         return null
     }
 
-    // --- NEW FUNCTIONS NEEDED FOR SPECIFIC ERROR MESSAGES ---
-
-    // 1. Expose finding a user (so ViewModel can check if they exist)
     suspend fun getUserByUsername(username: String): User? {
         return userDao.getUserByUsername(username)
     }
 
-    // 2. Expose updating password (so ViewModel can call this after checking validity)
     suspend fun updatePassword(userId: Int, newPassword: String) {
         userDao.updatePassword(userId, newPassword)
     }
+
     suspend fun getUserById(userId: Int): User? {
         return userDao.getUserById(userId)
+    }
+
+    // --- NEW GOAL FUNCTIONS ---
+
+    suspend fun updateStepGoal(userId: Int, goal: Int) {
+        userDao.updateStepGoal(userId, goal)
+    }
+
+    fun getStepGoalStream(userId: Int): Flow<Int> {
+        // If database returns null, default to 0
+        return userDao.getStepGoal(userId).map { it ?: 0 }
     }
 }
