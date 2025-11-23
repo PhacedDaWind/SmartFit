@@ -16,6 +16,7 @@ interface UserDao {
     @Query("SELECT * FROM users WHERE userId = :id")
     suspend fun getUserById(id: Int): User?
 
-    @Query("UPDATE users SET password = :newPassword WHERE username = :username")
-    suspend fun updatePassword(username: String, newPassword: String)
+    // UPDATED: Update by userId (Primary Key) instead of username
+    @Query("UPDATE users SET password = :newPassword WHERE userId = :userId")
+    suspend fun updatePassword(userId: Int, newPassword: String)
 }

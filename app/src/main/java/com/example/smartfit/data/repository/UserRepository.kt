@@ -14,7 +14,6 @@ class UserRepository(private val userDao: UserDao) {
         }
     }
 
-    // Returns the User object if login succeeds, null otherwise
     suspend fun login(username: String, pass: String): User? {
         val user = userDao.getUserByUsername(username)
         if (user != null && user.password == pass) {
@@ -23,12 +22,15 @@ class UserRepository(private val userDao: UserDao) {
         return null
     }
 
-    suspend fun changePassword(username: String, currentPass: String, newPass: String): Boolean {
-        val user = userDao.getUserByUsername(username)
-        if (user != null && user.password == currentPass) {
-            userDao.updatePassword(username, newPass)
-            return true
-        }
-        return false
+    // --- NEW FUNCTIONS NEEDED FOR SPECIFIC ERROR MESSAGES ---
+
+    // 1. Expose finding a user (so ViewModel can check if they exist)
+    suspend fun getUserByUsername(username: String): User? {
+        return userDao.getUserByUsername(username)
+    }
+
+    // 2. Expose updating password (so ViewModel can call this after checking validity)
+    suspend fun updatePassword(userId: Int, newPassword: String) {
+        userDao.updatePassword(userId, newPassword)
     }
 }

@@ -19,10 +19,11 @@ class AuthViewModel(
 
     fun register(username: String, pass: String) {
         viewModelScope.launch {
-            if (userRepository.registerUser(User(username = username, password = pass))) {
-                _authState.value = AuthState.Success
-            } else {
+            if (userRepository.getUserByUsername(username) != null) {
                 _authState.value = AuthState.Error("Username taken")
+            } else {
+                userRepository.registerUser(User(username = username, password = pass))
+                _authState.value = AuthState.Success
             }
         }
     }
@@ -39,13 +40,33 @@ class AuthViewModel(
         }
     }
 
-    fun changePassword(username: String, oldPass: String, newPass: String) {
+    fun changePassword(username: String, oldPassInput: String, newPassInput: String) {
         viewModelScope.launch {
-            if (userRepository.changePassword(username, oldPass, newPass)) {
-                _authState.value = AuthState.Success
-            } else {
-                _authState.value = AuthState.Error("Incorrect current password")
+
+            // 1. Get the User from Database FIRST
+            val user = userRepository.getUserByUsername(username)
+
+            if (user == null) {
+                _authState.value = AuthState.Error("User does not exist")
+                return@launch
             }
+
+            // 2. CHECK: Is the New Password the same as the ACTUAL DB Password?
+            // (We compare against user.password, not the input text)
+            if (user.password == newPassInput) {
+                _authState.value = AuthState.Error("New password cannot be the same as your old password")
+                return@launch
+            }
+
+            // 3. CHECK: Did the user type the correct Current Password?
+            if (user.password != oldPassInput) {
+                _authState.value = AuthState.Error("Incorrect current password")
+                return@launch
+            }
+
+            // 4. All checks passed -> Update
+            userRepository.updatePassword(user.userId, newPassInput)
+            _authState.value = AuthState.Success
         }
     }
 
