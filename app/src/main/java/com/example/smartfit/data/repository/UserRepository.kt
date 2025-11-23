@@ -33,4 +33,7 @@ class UserRepository(private val userDao: UserDao) {
     suspend fun updatePassword(userId: Int, newPassword: String) {
         userDao.updatePassword(userId, newPassword)
     }
+    suspend fun getUserById(userId: Int): User? {
+        return userDao.getUserById(userId)
+    }
 }

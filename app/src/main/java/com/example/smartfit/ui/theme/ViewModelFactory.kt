@@ -48,7 +48,8 @@ class ViewModelFactory(
             @Suppress("UNCHECKED_CAST")
             // Pass both ActivityRepository (for API) and StepSensorRepository (for Steps)
             return HomeViewModel(activityRepository,        // 1. For Database Stats (Calories/Workouts)
-                userPreferencesRepository, // 2. For Current User ID
+                userPreferencesRepository,
+                userRepository,// 2. For Current User ID
                 stepSensorRepository) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")

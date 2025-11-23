@@ -4,26 +4,33 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.DirectionsRun
+import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.smartfit.SmartFitApplication
 import com.example.smartfit.ui.theme.ViewModelFactory
 import java.text.DecimalFormat
-import java.util.Calendar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -35,7 +42,7 @@ fun HomeScreen(
         factory = ViewModelFactory(
             application.repository,
             application.userPreferencesRepository,
-            application.userRepository,
+            application.userRepository, // Ensure this is passed to Factory
             application.stepSensorRepository
         )
     )
@@ -43,103 +50,103 @@ fun HomeScreen(
     val stats by viewModel.stats.collectAsState()
     val filter by viewModel.timeFilter.collectAsState()
     val dateLabel by viewModel.dateLabel.collectAsState()
+    val username by viewModel.username.collectAsState() // Observe the username
     val scrollState = rememberScrollState()
 
     // --- DATE PICKER STATE ---
     var showDatePicker by remember { mutableStateOf(false) }
     val datePickerState = rememberDatePickerState()
 
-    // Handle Date Selection
     if (showDatePicker) {
         DatePickerDialog(
             onDismissRequest = { showDatePicker = false },
             confirmButton = {
                 TextButton(onClick = {
-                    // Get selected date from picker and pass to ViewModel
-                    datePickerState.selectedDateMillis?.let {
-                        viewModel.updateDate(it)
-                    }
+                    datePickerState.selectedDateMillis?.let { viewModel.updateDate(it) }
                     showDatePicker = false
-                }) {
-                    Text("OK")
-                }
+                }) { Text("OK") }
             },
-            dismissButton = {
-                TextButton(onClick = { showDatePicker = false }) { Text("Cancel") }
-            }
-        ) {
-            DatePicker(state = datePickerState)
-        }
+            dismissButton = { TextButton(onClick = { showDatePicker = false }) { Text("Cancel") } }
+        ) { DatePicker(state = datePickerState) }
     }
 
-    // 1. TABLET WRAPPER
+    // 1. MAIN SCREEN WRAPPER
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background),
         contentAlignment = Alignment.TopCenter
     ) {
-        // 2. CONTENT COLUMN
+        // 2. SCROLLABLE CONTENT (Centered for Tablets)
         Column(
             modifier = Modifier
-                .padding(16.dp)
+                .padding(horizontal = 16.dp)
                 .widthIn(max = 600.dp)
                 .verticalScroll(scrollState),
-            verticalArrangement = Arrangement.spacedBy(20.dp)
+            verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
+            Spacer(modifier = Modifier.height(16.dp))
 
-            // --- HEADER ---
+            // --- HEADER SECTION ---
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Dashboard", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-                Row(
-                    modifier = Modifier
-                        .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(50))
-                        .padding(4.dp)
+                Column {
+                    // UPDATED: Shows the actual username
+                    Text(
+                        text = "Hello, $username",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.secondary
+                    )
+                    Text(
+                        text = "Dashboard",
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.ExtraBold
+                    )
+                }
+
+                // Filter Toggle
+                Surface(
+                    shape = RoundedCornerShape(50),
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    modifier = Modifier.height(40.dp)
                 ) {
-                    FilterChip(
-                        selected = filter == "Daily",
-                        onClick = { viewModel.updateFilter("Daily") },
-                        label = { Text("Daily") },
-                        colors = FilterChipDefaults.filterChipColors(selectedContainerColor = MaterialTheme.colorScheme.primary, selectedLabelColor = MaterialTheme.colorScheme.onPrimary),
-                        border = null
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    FilterChip(
-                        selected = filter == "Monthly",
-                        onClick = { viewModel.updateFilter("Monthly") },
-                        label = { Text("Monthly") },
-                        colors = FilterChipDefaults.filterChipColors(selectedContainerColor = MaterialTheme.colorScheme.primary, selectedLabelColor = MaterialTheme.colorScheme.onPrimary),
-                        border = null
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(4.dp)) {
+                        TimeFilterChip(text = "Daily", isSelected = filter == "Daily") { viewModel.updateFilter("Daily") }
+                        Spacer(modifier = Modifier.width(4.dp))
+                        TimeFilterChip(text = "Monthly", isSelected = filter == "Monthly") { viewModel.updateFilter("Monthly") }
+                    }
                 }
             }
 
-            // --- DATE NAVIGATOR (With Date Picker Trigger) ---
-            Card(
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            // --- DATE NAVIGATOR PILL ---
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.surface,
+                shadowElevation = 2.dp,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(8.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(8.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     IconButton(onClick = { viewModel.previousPeriod() }) {
-                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, "Previous")
+                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, null, tint = MaterialTheme.colorScheme.primary)
                     }
 
-                    // CLICKABLE DATE TEXT
                     Row(
                         modifier = Modifier
-                            .clickable { showDatePicker = true } // <--- Opens Picker
-                            .padding(8.dp),
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable { showDatePicker = true }
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(Icons.Default.DateRange, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
+                        Icon(Icons.Default.CalendarMonth, null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = dateLabel,
@@ -150,138 +157,253 @@ fun HomeScreen(
                     }
 
                     IconButton(onClick = { viewModel.nextPeriod() }) {
-                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, "Next")
+                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = MaterialTheme.colorScheme.primary)
                     }
                 }
             }
 
-            // --- STEPS CARD ---
-            // (Same as before)
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
-            ) {
-                Column(
-                    modifier = Modifier.padding(24.dp).fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text("Steps", style = MaterialTheme.typography.labelLarge)
-                    Text("${stats.steps}", style = MaterialTheme.typography.displayLarge, fontWeight = FontWeight.Bold)
-                    val progress = (stats.steps.toFloat() / stats.stepGoal.toFloat()).coerceIn(0f, 1f)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    LinearProgressIndicator(
-                        progress = { progress },
-                        modifier = Modifier.fillMaxWidth(0.7f).height(8.dp),
-                        color = MaterialTheme.colorScheme.primary,
-                        trackColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.3f),
-                        strokeCap = StrokeCap.Round,
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text("Goal: ${stats.stepGoal} • ${formatDecimal(stats.totalBurned)} kcal", style = MaterialTheme.typography.bodyMedium)
-                    Spacer(modifier = Modifier.height(16.dp))
+            // --- HERO STEPS CARD ---
+            StepsHeroCard(stats, viewModel)
 
-                    // Goal Chips
-                    Text("Set Goal:", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        val goals = listOf(1500, 2500, 4000)
-                        goals.forEach { goal ->
-                            FilterChip(
-                                selected = (stats.stepGoal == goal),
-                                onClick = { viewModel.updateStepGoal(goal) },
-                                label = { Text("$goal") },
-                                modifier = Modifier.padding(horizontal = 4.dp),
-                                colors = FilterChipDefaults.filterChipColors(selectedContainerColor = MaterialTheme.colorScheme.tertiary, selectedLabelColor = MaterialTheme.colorScheme.onTertiary)
-                            )
-                        }
-                    }
-                }
-            }
+            // --- STATS GRID (Calories) ---
+            Text("Calories Today", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
 
-            // --- CALORIES ---
-            Text("Calories", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 GaugeCard(
                     title = "Burned",
-                    subtitle = "(Walking Only)",
+                    subtitle = "Active Energy",
                     current = stats.totalBurned,
-                    visualMax = 500.0,
-                    color = Color(0xFFFFA726),
+                    visualMax = 600.0,
+                    color = Color(0xFFFF9800), // Orange
                     modifier = Modifier.weight(1f)
                 )
                 GaugeCard(
                     title = "Intake",
-                    subtitle = "(Food & Drink)",
+                    subtitle = "Food & Drink",
                     current = stats.foodCalories,
-                    visualMax = 2000.0,
-                    color = Color(0xFF66BB6A),
+                    visualMax = 2500.0,
+                    color = Color(0xFF4CAF50), // Green
                     modifier = Modifier.weight(1f)
                 )
             }
 
-            // --- WORKOUTS ---
-            Text("Workouts", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                StatCard(
+            // --- ACTIVITY BREAKDOWN ---
+            Text("Activity Breakdown", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                ActivityStatCard(
                     title = "Cardio",
-                    value = "${stats.cardioCount}",
+                    value = stats.cardioCount.toString(),
                     unit = "Sessions",
-                    icon = "🏃",
-                    modifier = Modifier.weight(1f),
-                    onClick = { onWorkoutTypeClick("Cardio") }
+                    icon = Icons.Default.DirectionsRun,
+                    color = Color(0xFF2196F3), // Blue
+                    onClick = { onWorkoutTypeClick("Cardio") },
+                    modifier = Modifier.weight(1f)
                 )
-                StatCard(
+                ActivityStatCard(
                     title = "Strength",
-                    value = "${stats.strengthCount}",
+                    value = stats.strengthCount.toString(),
                     unit = "Sessions",
-                    icon = "💪",
-                    modifier = Modifier.weight(1f),
-                    onClick = { onWorkoutTypeClick("Strength") }
+                    icon = Icons.Default.FitnessCenter,
+                    color = Color(0xFF9C27B0), // Purple
+                    onClick = { onWorkoutTypeClick("Strength") },
+                    modifier = Modifier.weight(1f)
                 )
+            }
+
+            Spacer(modifier = Modifier.height(32.dp))
+        }
+    }
+}
+
+// --- COMPONENT: Custom Filter Chip ---
+@Composable
+fun TimeFilterChip(text: String, isSelected: Boolean, onClick: () -> Unit) {
+    val bgColor = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent
+    val textColor = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(50))
+            .background(bgColor)
+            .clickable { onClick() }
+            .padding(horizontal = 16.dp, vertical = 6.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(text = text, style = MaterialTheme.typography.labelLarge, color = textColor, fontWeight = FontWeight.Bold)
+    }
+}
+
+// --- COMPONENT: Hero Steps Card ---
+@Composable
+fun StepsHeroCard(stats: HomeStats, viewModel: HomeViewModel) {
+    val progress = (stats.steps.toFloat() / stats.stepGoal.toFloat()).coerceIn(0f, 1f)
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(8.dp, RoundedCornerShape(24.dp)),
+        shape = RoundedCornerShape(24.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .background(
+                    Brush.linearGradient(
+                        colors = listOf(
+                            MaterialTheme.colorScheme.primary,
+                            MaterialTheme.colorScheme.tertiary
+                        )
+                    )
+                )
+                .padding(24.dp)
+        ) {
+            Column {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.DirectionsRun, null, tint = Color.White.copy(alpha = 0.8f))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Step Count", style = MaterialTheme.typography.titleMedium, color = Color.White.copy(alpha = 0.8f))
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text(
+                    text = "${stats.steps}",
+                    style = MaterialTheme.typography.displayLarge,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = Color.White,
+                    fontSize = 64.sp,
+                    lineHeight = 64.sp
+                )
+                Text(
+                    text = "/ ${stats.stepGoal} steps",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = Color.White.copy(alpha = 0.7f)
+                )
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                LinearProgressIndicator(
+                    progress = { progress },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(12.dp)
+                        .clip(RoundedCornerShape(50)),
+                    color = Color.White,
+                    trackColor = Color.White.copy(alpha = 0.3f),
+                )
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Text("Quick Goal Change:", style = MaterialTheme.typography.labelMedium, color = Color.White.copy(alpha = 0.8f), fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf(1500, 2500, 4000).forEach { goal ->
+                        val isSelected = stats.stepGoal == goal
+                        val bg = if (isSelected) Color.White else Color.White.copy(alpha = 0.2f)
+                        val txt = if (isSelected) MaterialTheme.colorScheme.primary else Color.White
+
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(bg)
+                                .clickable { viewModel.updateStepGoal(goal) }
+                                .padding(horizontal = 12.dp, vertical = 6.dp)
+                        ) {
+                            Text(text = "$goal", style = MaterialTheme.typography.labelMedium, color = txt, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
             }
         }
     }
 }
 
+// --- COMPONENT: Gauge Card ---
 @Composable
 fun GaugeCard(title: String, subtitle: String, current: Double, visualMax: Double, color: Color, modifier: Modifier = Modifier) {
     val progress = (current / visualMax).toFloat().coerceIn(0f, 1f)
-    Card(modifier = modifier, colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
-        Column(modifier = Modifier.padding(16.dp).fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-            Text(subtitle, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary)
-            Spacer(modifier = Modifier.height(16.dp))
-            Box(contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(progress = { 1f }, modifier = Modifier.size(80.dp), color = MaterialTheme.colorScheme.surfaceVariant, strokeWidth = 8.dp)
-                CircularProgressIndicator(progress = { progress }, modifier = Modifier.size(80.dp), color = color, strokeWidth = 8.dp, strokeCap = StrokeCap.Round)
-                Text(text = formatDecimal(current), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+
+    Card(
+        modifier = modifier,
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp).fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Box(contentAlignment = Alignment.Center, modifier = Modifier.size(100.dp)) {
+                CircularProgressIndicator(
+                    progress = { 1f },
+                    modifier = Modifier.fillMaxSize(),
+                    color = color.copy(alpha = 0.2f),
+                    strokeWidth = 10.dp,
+                    strokeCap = StrokeCap.Round
+                )
+                CircularProgressIndicator(
+                    progress = { progress },
+                    modifier = Modifier.fillMaxSize(),
+                    color = color,
+                    strokeWidth = 10.dp,
+                    strokeCap = StrokeCap.Round
+                )
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = formatDecimal(current),
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text("kcal", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary)
+                }
             }
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
 
+// --- COMPONENT: Activity Stat Card ---
 @Composable
-fun StatCard(title: String, value: String, unit: String, icon: String, modifier: Modifier = Modifier, onClick: () -> Unit = {}) {
-    Card(modifier = modifier.clickable { onClick() }, colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)) {
-        Column(modifier = Modifier.padding(16.dp).fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(icon, style = MaterialTheme.typography.headlineMedium)
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(value, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-            Text("$title ($unit)", style = MaterialTheme.typography.labelMedium)
+fun ActivityStatCard(
+    title: String,
+    value: String,
+    unit: String,
+    icon: ImageVector,
+    color: Color,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier.clickable { onClick() },
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = color.copy(alpha = 0.1f),
+                modifier = Modifier.size(48.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(icon, null, tint = color)
+                }
+            }
+            Spacer(modifier = Modifier.width(12.dp))
+            Column {
+                Text(value, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                Text("$title ($unit)", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary, lineHeight = 12.sp)
+            }
         }
     }
 }
 
 fun formatDecimal(value: Double): String {
-    return DecimalFormat("#.##").format(value)
+    return DecimalFormat("#").format(value)
 }

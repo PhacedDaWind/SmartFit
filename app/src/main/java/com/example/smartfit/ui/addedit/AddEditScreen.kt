@@ -1,19 +1,37 @@
 package com.example.smartfit.ui.addedit
 
 import android.annotation.SuppressLint
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DirectionsRun
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.FitnessCenter
+import androidx.compose.material.icons.filled.LocalFireDepartment
+import androidx.compose.material.icons.filled.MonitorWeight
+import androidx.compose.material.icons.filled.Restaurant
+import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -43,24 +61,13 @@ fun AddEditScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (uiState.isEditing) "Edit Activity" else "Add Activity") },
+                title = { Text(if (uiState.isEditing) "Edit Log" else "New Entry", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateUp) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
                 actions = {
-                    IconButton(
-                        onClick = {
-                            coroutineScope.launch {
-                                viewModel.saveLog()
-                                onNavigateUp()
-                            }
-                        },
-                        enabled = uiState.isEntryValid
-                    ) {
-                        Icon(Icons.Filled.Check, contentDescription = "Save")
-                    }
                     if (uiState.isEditing) {
                         IconButton(
                             onClick = {
@@ -70,11 +77,25 @@ fun AddEditScreen(
                                 }
                             }
                         ) {
-                            Icon(Icons.Filled.Delete, contentDescription = "Delete")
+                            Icon(Icons.Filled.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error)
                         }
                     }
                 }
             )
+        },
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = {
+                    coroutineScope.launch {
+                        viewModel.saveLog()
+                        onNavigateUp()
+                    }
+                },
+                containerColor = if (uiState.isEntryValid) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                contentColor = if (uiState.isEntryValid) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+            ) {
+                Icon(Icons.Filled.Check, contentDescription = "Save")
+            }
         }
     ) { paddingValues ->
         Box(
@@ -87,9 +108,9 @@ fun AddEditScreen(
                 uiState = uiState,
                 viewModel = viewModel,
                 modifier = Modifier
-                    .padding(16.dp)
-                    .fillMaxSize()
+                    .padding(horizontal = 16.dp)
                     .widthIn(max = 600.dp)
+                    .verticalScroll(rememberScrollState()) // Added scrolling
             )
         }
     }
@@ -101,107 +122,192 @@ private fun LogEntryForm(
     viewModel: AddEditViewModel,
     modifier: Modifier = Modifier
 ) {
-    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(24.dp)) {
 
-        // 1. Category Selection
-        Text("Category", style = MaterialTheme.typography.labelLarge)
-        Row(Modifier.fillMaxWidth()) {
-            RadioButtonGroup(
-                options = listOf("Workout", "Food & Drinks"),
-                selectedOption = uiState.category,
-                onOptionSelected = { viewModel.onCategoryChange(it) }
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // --- 1. CATEGORY SELECTION (Better than Radio Buttons) ---
+        Text("What are you tracking?", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            SelectionCard(
+                text = "Workout",
+                icon = Icons.Default.FitnessCenter,
+                isSelected = uiState.category == "Workout",
+                onClick = { viewModel.onCategoryChange("Workout") },
+                modifier = Modifier.weight(1f)
+            )
+            SelectionCard(
+                text = "Food",
+                icon = Icons.Default.Restaurant,
+                isSelected = uiState.category != "Workout",
+                onClick = { viewModel.onCategoryChange("Food & Drinks") },
+                modifier = Modifier.weight(1f)
             )
         }
 
-        // 2. Workout Type Selection
-        if (uiState.category == "Workout") {
-            Text("Workout Type", style = MaterialTheme.typography.labelLarge)
-            Row(Modifier.fillMaxWidth()) {
-                RadioButtonGroup(
-                    options = listOf("Cardio", "Strength"),
-                    selectedOption = uiState.workoutType,
-                    onOptionSelected = { viewModel.onWorkoutTypeChange(it) }
-                )
+        // --- 2. WORKOUT TYPE (Animated Visibility) ---
+        AnimatedVisibility(visible = uiState.category == "Workout") {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("Workout Type", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    SelectionCard(
+                        text = "Cardio",
+                        icon = Icons.Default.DirectionsRun,
+                        isSelected = uiState.workoutType == "Cardio",
+                        onClick = { viewModel.onWorkoutTypeChange("Cardio") },
+                        modifier = Modifier.weight(1f)
+                    )
+                    SelectionCard(
+                        text = "Strength",
+                        icon = Icons.Default.MonitorWeight, // Changed icon
+                        isSelected = uiState.workoutType == "Strength",
+                        onClick = { viewModel.onWorkoutTypeChange("Strength") },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
             }
         }
 
-        Divider()
+        HorizontalDivider()
 
-        // 3. Name Input
-        OutlinedTextField(
+        // --- 3. DETAILS INPUTS ---
+        Text("Details", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+
+        // Name Input
+        StyledTextField(
             value = uiState.name,
             onValueChange = { viewModel.onNameChange(it) },
-            label = { Text(if (uiState.category == "Food & Drinks") "Item Name" else "Exercise Name") },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true
+            label = if (uiState.category == "Workout") "Exercise Name (e.g. Bench Press)" else "Item Name (e.g. Banana)",
+            icon = Icons.Default.Edit,
+            imeAction = ImeAction.Next
         )
 
-        // 4. Value Input
-        val valueLabel = when {
-            uiState.category == "Food & Drinks" -> "Calories (kcal)"
-            uiState.workoutType == "Strength" -> "Weight (kg) - Optional"
-            else -> "Duration (Minutes)"
+        // Value Input (Dynamic Label & Icon)
+        val (valueLabel, valueIcon) = when {
+            uiState.category != "Workout" -> Pair("Calories (kcal)", Icons.Default.LocalFireDepartment)
+            uiState.workoutType == "Strength" -> Pair("Weight (kg)", Icons.Default.FitnessCenter)
+            else -> Pair("Duration (Minutes)", Icons.Default.Timer)
         }
-        val placeholderText = if (uiState.workoutType == "Strength") "Leave blank for Bodyweight" else ""
+        val placeholderText = if (uiState.workoutType == "Strength") "Leave empty for Bodyweight" else ""
 
-        OutlinedTextField(
+        StyledTextField(
             value = uiState.value,
             onValueChange = { viewModel.onValueChange(it) },
-            label = { Text(valueLabel) },
-            placeholder = { if (placeholderText.isNotEmpty()) Text(placeholderText) },
-            modifier = Modifier.fillMaxWidth(),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            singleLine = true
+            label = valueLabel,
+            icon = valueIcon,
+            placeholder = placeholderText,
+            isNumber = true
         )
 
-        // 5. Sets & Reps
+        // --- 4. STRENGTH SPECIFIC (Sets x Reps) ---
         if (uiState.category == "Workout" && uiState.workoutType == "Strength") {
+            Text("Volume", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                OutlinedTextField(
+                // Sets
+                StyledTextField(
                     value = uiState.sets,
                     onValueChange = { viewModel.onSetsChange(it) },
-                    label = { Text("Sets") },
-                    modifier = Modifier.weight(1f),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    singleLine = true
+                    label = "Sets",
+                    icon = null, // No icon to save space
+                    isNumber = true,
+                    modifier = Modifier.weight(1f)
                 )
-                OutlinedTextField(
+
+                // Visual "X"
+                Text("X", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.outline)
+
+                // Reps
+                StyledTextField(
                     value = uiState.reps,
                     onValueChange = { viewModel.onRepsChange(it) },
-                    label = { Text("Reps") },
-                    modifier = Modifier.weight(1f),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    singleLine = true
+                    label = "Reps",
+                    icon = null,
+                    isNumber = true,
+                    modifier = Modifier.weight(1f)
                 )
             }
+        }
+
+        Spacer(modifier = Modifier.height(80.dp)) // Extra space at bottom for FAB
+    }
+}
+
+// --- HELPER COMPONENTS ---
+
+@Composable
+fun SelectionCard(
+    text: String,
+    icon: ImageVector,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val bgColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface
+    val borderColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+
+    Surface(
+        modifier = modifier
+            .height(80.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .border(1.dp, borderColor, RoundedCornerShape(16.dp))
+            .clickable { onClick() },
+        color = bgColor
+    ) {
+        Column(
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = if(isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = text,
+                style = MaterialTheme.typography.labelLarge,
+                color = if(isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
+            )
         }
     }
 }
 
 @Composable
-fun RadioButtonGroup(
-    options: List<String>,
-    selectedOption: String,
-    onOptionSelected: (String) -> Unit
+fun StyledTextField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String,
+    icon: ImageVector?,
+    placeholder: String = "",
+    isNumber: Boolean = false,
+    imeAction: ImeAction = ImeAction.Done,
+    modifier: Modifier = Modifier
 ) {
-    Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-        options.forEach { text ->
-            Row(
-                Modifier
-                    .selectable(
-                        selected = (text == selectedOption),
-                        onClick = { onOptionSelected(text) },
-                        role = Role.RadioButton
-                    )
-                    .padding(horizontal = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                RadioButton(selected = (text == selectedOption), onClick = null)
-                Text(text = text, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(start = 8.dp))
-            }
-        }
-    }
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        label = { Text(label) },
+        placeholder = { if(placeholder.isNotEmpty()) Text(placeholder) },
+        leadingIcon = if (icon != null) { { Icon(icon, contentDescription = null) } } else null,
+        trailingIcon = if (value.isNotEmpty()) {
+            { IconButton(onClick = { onValueChange("") }) { Icon(Icons.Default.Close, "Clear") } }
+        } else null,
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(
+            keyboardType = if (isNumber) KeyboardType.Number else KeyboardType.Text,
+            imeAction = imeAction
+        ),
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = MaterialTheme.colorScheme.primary,
+            unfocusedBorderColor = MaterialTheme.colorScheme.outline
+        )
+    )
 }
