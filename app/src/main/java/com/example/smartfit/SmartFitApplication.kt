@@ -24,7 +24,7 @@ class SmartFitApplication : Application(), ImageLoaderFactory {
 
     val stepSensorRepository by lazy { StepSensorRepository(this) }
 
-    val chatRepository by lazy { ChatRepository() }
+    val chatRepository by lazy { ChatRepository(database.chatDao()) }
 
     override fun onCreate() {
         super.onCreate()

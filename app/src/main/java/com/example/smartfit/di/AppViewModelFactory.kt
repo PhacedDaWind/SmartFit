@@ -29,9 +29,9 @@ object AppViewModelFactory : ViewModelProvider.Factory {
             }
 
             modelClass.isAssignableFrom(ChatViewModel::class.java) -> {
-                ChatViewModel(application.chatRepository) as T
+                // Update this line:
+                ChatViewModel(application.chatRepository, application.userPreferencesRepository) as T
             }
-
             // Later, your teammate will add their ViewModels here:
             // modelClass.isAssignableFrom(LogViewModel::class.java) -> {
             //    LogViewModel(application.smartFitRepository) as T
