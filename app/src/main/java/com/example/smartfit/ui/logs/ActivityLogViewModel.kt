@@ -14,7 +14,7 @@ class ActivityLogViewModel(
     private val userPreferencesRepository: UserPreferencesRepository
 ) : ViewModel() {
 
-    private val TAG = "ActivityLogViewModel" // <--- Log Tag
+    private val TAG = "ActivityLogViewModel"
     private val _filterType = MutableStateFlow("All")
     val filterType: StateFlow<String> = _filterType.asStateFlow()
 
@@ -27,11 +27,19 @@ class ActivityLogViewModel(
             Pair(userId, type)
         }.flatMapLatest { (userId, type) ->
             if (userId != null) {
-                Log.d(TAG, "Loading logs with filter: $type") // <--- Log
+                Log.d(TAG, "Loading logs with filter: $type")
                 when (type) {
+                    // 1. All Logs
                     "All" -> activityRepository.getLogsForUser(userId)
-                    "Workout" -> activityRepository.getWorkouts(userId)
+
+                    // 2. Specific Workout Types (These match your Database 'type' column)
+                    "Cardio" -> activityRepository.getLogsByType(userId, "Cardio")
+                    "Strength" -> activityRepository.getLogsByType(userId, "Strength")
+
+                    // 3. Food (Matches UI string "Food & Drinks")
                     "Food & Drinks" -> activityRepository.getFoodLogs(userId)
+
+                    // Fallback
                     else -> flowOf(emptyList())
                 }
             } else {
@@ -40,7 +48,7 @@ class ActivityLogViewModel(
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     fun updateFilter(newFilter: String) {
-        Log.d(TAG, "Filter updated to: $newFilter") // <--- Log
+        Log.d(TAG, "Filter updated to: $newFilter")
         _filterType.value = newFilter
     }
 }

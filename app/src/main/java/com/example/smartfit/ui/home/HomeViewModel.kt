@@ -173,7 +173,7 @@ class HomeViewModel(
                 }
             }
         }.onEach {
-            Log.d(TAG, "UI State Updated: Steps=${it.steps}, Calories=${it.totalBurned}") // <--- Log
+            Log.d(TAG, "UI State Updated: Steps=${it.steps}, Burned=${it.totalBurned}, Intake=${it.foodCalories}\"") // <--- Log
             _stats.value = it
         }.launchIn(viewModelScope)
     }
@@ -206,4 +206,4 @@ class HomeViewModel(
     }
 
     fun simulateSteps(amount: Int) {}
-}
+    }

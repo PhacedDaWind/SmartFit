@@ -22,7 +22,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -70,7 +69,7 @@ fun ActivityLogScreen(
                     containerColor = MaterialTheme.colorScheme.background,
                     titleContentColor = MaterialTheme.colorScheme.onBackground,
                 ),
-                windowInsets = WindowInsets(0.dp) // Handle safe area manually if needed
+                windowInsets = WindowInsets(0.dp)
             )
         },
         floatingActionButton = {
@@ -84,7 +83,6 @@ fun ActivityLogScreen(
             }
         }
     ) { paddingValues ->
-        // 1. TABLET WRAPPER
         Box(
             modifier = Modifier
                 .padding(paddingValues)
@@ -92,25 +90,27 @@ fun ActivityLogScreen(
                 .background(MaterialTheme.colorScheme.background),
             contentAlignment = Alignment.TopCenter
         ) {
-            // 2. CONTENT COLUMN
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .widthIn(max = 600.dp)
             ) {
-                // --- FILTER TABS ---
-                val filters = listOf("All", "Cardio", "Strength", "Food")
+                // --- UPDATED FILTERS ---
+                // MUST MATCH ViewModel exactly
+                val filters = listOf("All", "Cardio", "Strength", "Food & Drinks")
 
                 Surface(
                     color = MaterialTheme.colorScheme.surface,
                     shadowElevation = 2.dp,
                     modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
                 ) {
-                    TabRow(
+                    // ScrollableTabRow handles longer text like "Food & Drinks" better
+                    ScrollableTabRow(
                         selectedTabIndex = filters.indexOf(selectedFilter).coerceAtLeast(0),
                         containerColor = Color.Transparent,
                         contentColor = MaterialTheme.colorScheme.primary,
-                        divider = {}, // Remove default divider line
+                        edgePadding = 16.dp,
+                        divider = {},
                         indicator = { tabPositions ->
                             TabRowDefaults.SecondaryIndicator(
                                 Modifier.tabIndicatorOffset(tabPositions[filters.indexOf(selectedFilter).coerceAtLeast(0)]),
@@ -138,7 +138,6 @@ fun ActivityLogScreen(
                 // --- LOG LIST ---
                 Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
                     if (logs.isEmpty()) {
-                        // Improved Empty State
                         Column(
                             modifier = Modifier.align(Alignment.Center),
                             horizontalAlignment = Alignment.CenterHorizontally
@@ -156,11 +155,6 @@ fun ActivityLogScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 fontWeight = FontWeight.Bold
                             )
-                            Text(
-                                text = "Tap + to add your first activity!",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.outline
-                            )
                         }
                     } else {
                         LogList(
@@ -175,114 +169,37 @@ fun ActivityLogScreen(
     }
 }
 
+// ... (Keep LogList, LogItem, formatDate, formatValue exactly as they were) ...
 @Composable
-private fun LogList(
-    logs: List<ActivityLog>,
-    onLogClick: (Int) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    LazyColumn(
-        modifier = modifier,
-        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        items(logs, key = { it.id }) { log ->
-            LogItem(log = log, onClick = { onLogClick(log.id) })
-        }
+private fun LogList(logs: List<ActivityLog>, onLogClick: (Int) -> Unit, modifier: Modifier = Modifier) {
+    LazyColumn(modifier = modifier, contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        items(logs, key = { it.id }) { log -> LogItem(log, { onLogClick(log.id) }) }
     }
 }
 
 @Composable
-private fun LogItem(
-    log: ActivityLog,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    // Determine visual style based on type
+private fun LogItem(log: ActivityLog, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val (icon, color) = when (log.type) {
-        "Cardio" -> Pair(Icons.Default.DirectionsRun, Color(0xFF2196F3)) // Blue
-        "Strength" -> Pair(Icons.Default.FitnessCenter, Color(0xFF9C27B0)) // Purple
-        "Food & Drinks" -> Pair(Icons.Default.Restaurant, Color(0xFF4CAF50)) // Green
+        "Cardio" -> Pair(Icons.Default.DirectionsRun, Color(0xFF2196F3))
+        "Strength" -> Pair(Icons.Default.FitnessCenter, Color(0xFF9C27B0))
+        "Food & Drinks" -> Pair(Icons.Default.Restaurant, Color(0xFF4CAF50))
         else -> Pair(Icons.Default.History, MaterialTheme.colorScheme.secondary)
     }
-
-    Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .clickable { onClick() },
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-    ) {
-        Row(
-            modifier = Modifier
-                .padding(16.dp)
-                .fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // --- ICON CIRCLE ---
-            Surface(
-                shape = CircleShape,
-                color = color.copy(alpha = 0.1f),
-                modifier = Modifier.size(48.dp)
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(imageVector = icon, contentDescription = null, tint = color)
-                }
-            }
-
+    Card(modifier = modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).clickable { onClick() }, elevation = CardDefaults.cardElevation(2.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+        Row(modifier = Modifier.padding(16.dp).fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Surface(shape = CircleShape, color = color.copy(alpha = 0.1f), modifier = Modifier.size(48.dp)) { Box(contentAlignment = Alignment.Center) { Icon(imageVector = icon, contentDescription = null, tint = color) } }
             Spacer(modifier = Modifier.width(16.dp))
-
-            // --- TEXT DETAILS ---
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = log.name,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-
+                Text(text = log.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                 Spacer(modifier = Modifier.height(4.dp))
-
-                // Detailed Info Logic
-                val detailsText = if (log.type == "Strength") {
-                    val weightDisplay = if (log.values == 0.0) "Bodyweight" else "${formatValue(log.values)} kg"
-                    "${log.sets} Sets • ${log.reps} Reps • $weightDisplay"
-                } else {
-                    "${formatValue(log.values)} ${log.unit}"
-                }
-
-                Text(
-                    text = detailsText,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.secondary
-                )
-
+                val detailsText = if (log.type == "Strength") { val weightDisplay = if (log.values == 0.0) "Bodyweight" else "${formatValue(log.values)} kg"; "${log.sets} Sets • ${log.reps} Reps • $weightDisplay" } else { "${formatValue(log.values)} ${log.unit}" }
+                Text(text = detailsText, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.secondary)
                 Spacer(modifier = Modifier.height(2.dp))
-
-                Text(
-                    text = formatDate(log.date),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.outline
-                )
+                Text(text = formatDate(log.date), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
             }
-
-            // --- CHEVRON INDICATOR ---
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = "View Details",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-            )
+            Icon(imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "View Details", tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
         }
     }
 }
-
-private fun formatDate(timestamp: Long): String {
-    val sdf = SimpleDateFormat("MMM dd, hh:mm a", Locale.getDefault())
-    return sdf.format(Date(timestamp))
-}
-
-private fun formatValue(value: Double): String {
-    val formatter = DecimalFormat("0.##")
-    return formatter.format(value)
-}
+private fun formatDate(timestamp: Long): String = SimpleDateFormat("MMM dd, hh:mm a", Locale.getDefault()).format(Date(timestamp))
+private fun formatValue(value: Double): String = DecimalFormat("0.##").format(value)
