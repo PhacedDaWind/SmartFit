@@ -105,4 +105,20 @@ dependencies {
     // Image Loading
     implementation("io.coil-kt:coil-compose:2.6.0")
 
+    testImplementation("junit:junit:4.13.2")
+
+    // --- 2. REQUIRED FOR AppUiTests.kt ---
+    // (Runs on Emulator/Device, visual)
+    androidTestImplementation("androidx.test.ext:junit:1.1.5")
+    androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
+
+    // COMPOSE TESTING LIBRARIES (Crucial for createComposeRule)
+    // Check your Compose version (e.g., 1.6.0), ideally match it here
+    androidTestImplementation("androidx.compose.ui:ui-test-junit4:1.6.0")
+
+    // This is needed for the test to "see" the screen content
+    debugImplementation("androidx.compose.ui:ui-test-manifest:1.6.0")
+    
+    androidTestImplementation("androidx.navigation:navigation-testing:2.7.7")
+
 }
