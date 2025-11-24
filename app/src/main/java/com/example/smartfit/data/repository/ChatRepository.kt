@@ -1,5 +1,6 @@
 package com.example.smartfit.data.repository
 
+import android.util.Log
 import com.example.smartfit.BuildConfig
 import com.example.smartfit.data.local.ChatDao
 import com.example.smartfit.data.local.ChatMessageEntity
@@ -12,6 +13,7 @@ import kotlinx.coroutines.withContext
 
 class ChatRepository(private val chatDao: ChatDao) {
 
+    private val TAG = "ChatRepository"
     private val generativeModel = GenerativeModel(
         modelName = "gemini-2.5-flash",
         apiKey = BuildConfig.GEMINI_API_KEY
@@ -40,6 +42,7 @@ class ChatRepository(private val chatDao: ChatDao) {
 
     suspend fun sendMessage(userId: Int, userMessage: String) = withContext(Dispatchers.IO) {
         try {
+            Log.d(TAG, "Sending message to Gemini: $userMessage")
             // 1. Save User Message to DB immediately
             chatDao.insertMessage(
                 ChatMessageEntity(userId = userId, text = userMessage, isFromUser = true)
@@ -63,6 +66,8 @@ class ChatRepository(private val chatDao: ChatDao) {
             val response = chat.sendMessage(userMessage)
             val fullText = response.text ?: "I couldn't understand that."
 
+            Log.d(TAG, "Received AI response: $fullText")
+
             // 5. Parse Image & Save AI Response
             var messageText = fullText
             var imageKeyword: String? = null
@@ -76,6 +81,7 @@ class ChatRepository(private val chatDao: ChatDao) {
                 if (parts.size > 1) {
                     imageKeyword = parts[1].trim()
                 }
+                Log.d(TAG, "Image keyword detected: $imageKeyword")
             }
 
             // --- CRITICAL FIX: Ensure text is never empty ---
@@ -93,8 +99,10 @@ class ChatRepository(private val chatDao: ChatDao) {
                     imageUrl = imageKeyword
                 )
             )
+            Log.d(TAG, "AI Message saved to Database")
 
         } catch (e: Exception) {
+            Log.e(TAG, "Error in sendMessage: ${e.localizedMessage}")
             chatDao.insertMessage(
                 ChatMessageEntity(userId = userId, text = "Error: ${e.localizedMessage}", isFromUser = false)
             )
@@ -104,6 +112,7 @@ class ChatRepository(private val chatDao: ChatDao) {
     suspend fun ensureWelcomeMessage(userId: Int) {
         val currentMessages = chatDao.getMessagesForUser(userId).first()
         if (currentMessages.isEmpty()) {
+            Log.d(TAG, "No history found. Inserting Welcome Message.")
             chatDao.insertMessage(
                 ChatMessageEntity(
                     userId = userId,
