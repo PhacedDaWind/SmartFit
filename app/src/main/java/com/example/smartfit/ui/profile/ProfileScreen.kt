@@ -5,7 +5,10 @@ import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -14,6 +17,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
@@ -61,7 +65,8 @@ fun ProfileScreen(
                 modifier = Modifier
                     .padding(16.dp)
                     .fillMaxSize()
-                    .widthIn(max = 600.dp),
+                    .widthIn(max = 600.dp)
+                    .verticalScroll(rememberScrollState()), // Enable scrolling for smaller screens
                 verticalArrangement = Arrangement.spacedBy(24.dp)
             ) {
 
@@ -71,11 +76,10 @@ fun ProfileScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        // Logic: If we have a saved path, load that file. Otherwise, show a default robot.
                         val modelData = if (profileImagePath != null) {
-                            File(profileImagePath!!) // Load local file
+                            File(profileImagePath!!)
                         } else {
-                            "https://robohash.org/default_user?set=set1" // Default robot
+                            "https://robohash.org/default_user?set=set1"
                         }
 
                         AsyncImage(
@@ -85,7 +89,6 @@ fun ProfileScreen(
                                 .size(120.dp)
                                 .clip(CircleShape)
                                 .clickable {
-                                    // Launch the gallery picker requesting Images only
                                     photoPickerLauncher.launch(
                                         PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
                                     )
@@ -98,6 +101,91 @@ fun ProfileScreen(
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.secondary
                         )
+                    }
+                }
+
+                HorizontalDivider(Modifier, DividerDefaults.Thickness, DividerDefaults.color)
+
+                // --- BMI CALCULATOR CARD ---
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "BMI Calculator",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        // Inputs Row
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            OutlinedTextField(
+                                value = viewModel.weightInput,
+                                onValueChange = { viewModel.weightInput = it },
+                                label = { Text("Weight (kg)") },
+                                modifier = Modifier.weight(1f),
+                                singleLine = true,
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedContainerColor = MaterialTheme.colorScheme.surface,
+                                    unfocusedContainerColor = MaterialTheme.colorScheme.surface
+                                )
+                            )
+                            OutlinedTextField(
+                                value = viewModel.heightInput,
+                                onValueChange = { viewModel.heightInput = it },
+                                label = { Text("Height (cm)") },
+                                modifier = Modifier.weight(1f),
+                                singleLine = true,
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedContainerColor = MaterialTheme.colorScheme.surface,
+                                    unfocusedContainerColor = MaterialTheme.colorScheme.surface
+                                )
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        // Calculate Button
+                        Button(
+                            onClick = { viewModel.calculateBMI() },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Calculate")
+                        }
+
+                        // Result Display
+                        val bmi = viewModel.bmiResult.collectAsState().value
+                        if (bmi > 0.0) {
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Text(
+                                text = "Your BMI: $bmi",
+                                style = MaterialTheme.typography.headlineSmall,
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.ExtraBold
+                            )
+
+                            val category = when {
+                                bmi < 18.5 -> "Underweight"
+                                bmi < 25.0 -> "Normal Weight"
+                                bmi < 30.0 -> "Overweight"
+                                else -> "Obese"
+                            }
+                            Text(
+                                text = category,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
 
@@ -122,7 +210,7 @@ fun ProfileScreen(
                     )
                 }
 
-                Spacer(modifier = Modifier.weight(1f))
+                Spacer(modifier = Modifier.height(24.dp))
 
                 Button(
                     onClick = { viewModel.logout(onLogoutComplete = onLogout) },
