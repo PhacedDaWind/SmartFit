@@ -21,15 +21,12 @@ class AddEditViewModel(
     private var currentLog: ActivityLog? = null
 
     init {
-        // Load existing log if editing
         if (logId != null && logId != -1) {
             viewModelScope.launch {
                 currentLog = activityRepository.getLogById(logId).first()
                 currentLog?.let { log ->
                     val cat = if (log.type == "Food" || log.type == "Food & Drinks") "Food & Drinks" else "Workout"
                     val wType = if (log.type == "Strength") "Strength" else "Cardio"
-
-                    // Logic: If saved value is 0.0, show empty string in the UI
                     val displayValue = if (log.values == 0.0) "" else log.values.toString()
 
                     _uiState.update {
@@ -49,35 +46,43 @@ class AddEditViewModel(
         }
     }
 
-    // --- INPUT HANDLERS ---
+    // --- INPUT HANDLERS (Now reset error on type) ---
 
     fun onCategoryChange(cat: String) {
-        _uiState.update { it.copy(category = cat, isEntryValid = validateInput(cat, it.workoutType, it.name, it.value, it.sets, it.reps)) }
+        _uiState.update { it.copy(category = cat, showError = false, isEntryValid = validateInput(cat, it.workoutType, it.name, it.value, it.sets, it.reps)) }
     }
     fun onWorkoutTypeChange(wType: String) {
         _uiState.update {
             val newSets = if (wType == "Cardio") "" else it.sets
             val newReps = if (wType == "Cardio") "" else it.reps
-            it.copy(workoutType = wType, sets = newSets, reps = newReps, isEntryValid = validateInput(it.category, wType, it.name, it.value, newSets, newReps))
+            it.copy(workoutType = wType, sets = newSets, reps = newReps, showError = false, isEntryValid = validateInput(it.category, wType, it.name, it.value, newSets, newReps))
         }
     }
     fun onNameChange(v: String) {
-        _uiState.update { it.copy(name = v, isEntryValid = validateInput(it.category, it.workoutType, v, it.value, it.sets, it.reps)) }
+        _uiState.update { it.copy(name = v, showError = false, isEntryValid = validateInput(it.category, it.workoutType, v, it.value, it.sets, it.reps)) }
     }
     fun onValueChange(v: String) {
-        _uiState.update { it.copy(value = v, isEntryValid = validateInput(it.category, it.workoutType, it.name, v, it.sets, it.reps)) }
+        _uiState.update { it.copy(value = v, showError = false, isEntryValid = validateInput(it.category, it.workoutType, it.name, v, it.sets, it.reps)) }
     }
     fun onSetsChange(v: String) {
-        _uiState.update { it.copy(sets = v, isEntryValid = validateInput(it.category, it.workoutType, it.name, it.value, v, it.reps)) }
+        _uiState.update { it.copy(sets = v, showError = false, isEntryValid = validateInput(it.category, it.workoutType, it.name, it.value, v, it.reps)) }
     }
     fun onRepsChange(v: String) {
-        _uiState.update { it.copy(reps = v, isEntryValid = validateInput(it.category, it.workoutType, it.name, it.value, it.sets, v)) }
+        _uiState.update { it.copy(reps = v, showError = false, isEntryValid = validateInput(it.category, it.workoutType, it.name, it.value, it.sets, v)) }
     }
 
-    // --- SAVE LOGIC ---
-    fun saveLog() {
-        if (!uiState.value.isEntryValid) return
+    // --- SAVE LOGIC (Updated to check validation) ---
+    fun saveLog(): Boolean {
+        // 1. Re-run validation to be sure
+        val isValid = validateInput(uiState.value.category, uiState.value.workoutType, uiState.value.name, uiState.value.value, uiState.value.sets, uiState.value.reps)
 
+        // 2. If invalid, show error and stop
+        if (!isValid) {
+            _uiState.update { it.copy(showError = true) }
+            return false
+        }
+
+        // 3. If valid, proceed to save
         viewModelScope.launch {
             val userId = userPreferencesRepository.currentUserId.first() ?: return@launch
             val state = _uiState.value
@@ -94,7 +99,6 @@ class AddEditViewModel(
                 if (state.workoutType == "Cardio") {
                     finalType = "Cardio"
                     finalUnit = "mins"
-                    // sets/reps stay 0
                 } else {
                     finalType = "Strength"
                     finalUnit = "kg"
@@ -103,7 +107,6 @@ class AddEditViewModel(
                 }
             }
 
-            // If user left value blank, save as 0.0 (Bodyweight)
             val finalValue = state.value.toDoubleOrNull() ?: 0.0
 
             activityRepository.upsertLog(
@@ -119,6 +122,7 @@ class AddEditViewModel(
                 )
             )
         }
+        return true // Return success
     }
 
     fun deleteLog() {
@@ -138,11 +142,8 @@ class AddEditViewModel(
     ): Boolean {
         if (name.isBlank()) return false
 
-        // 1. Strength Validation
         if (cat == "Workout" && wType == "Strength") {
-            // Weight can be blank (Bodyweight). If not blank, must be a number.
             val isWeightValid = value.isBlank() || value.toDoubleOrNull() != null
-
             // Sets and Reps MUST be filled
             val areSetsRepsValid = sets.isNotBlank() && sets.toIntOrNull() != null &&
                     reps.isNotBlank() && reps.toIntOrNull() != null
@@ -150,7 +151,7 @@ class AddEditViewModel(
             return isWeightValid && areSetsRepsValid
         }
 
-        // 2. Cardio & Food Validation (Value/Duration IS Required)
+        // Cardio & Food
         return value.isNotBlank() && value.toDoubleOrNull() != null
     }
 }

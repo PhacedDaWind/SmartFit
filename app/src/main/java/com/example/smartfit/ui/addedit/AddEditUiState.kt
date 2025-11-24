@@ -4,9 +4,10 @@ data class AddEditUiState (
     val name: String = "",
     val value: String = "",
     val sets: String = "",
-    val reps: String = "", // NEW: Holds the reps input
+    val reps: String = "",
     val category: String = "Workout",
     val workoutType: String = "Cardio",
     val isEntryValid: Boolean = false,
-    val isEditing: Boolean = false
+    val isEditing: Boolean = false,
+    val showError: Boolean = false
 )
