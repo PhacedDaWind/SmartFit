@@ -1,5 +1,7 @@
 package com.example.smartfit.data.repository
 
+import android.content.ContentValues.TAG
+import android.util.Log
 import com.example.smartfit.data.local.ActivityLog
 import com.example.smartfit.data.local.ActivityLogDao
 import com.example.smartfit.data.local.DailyStep
@@ -15,7 +17,10 @@ class ActivityRepository(
     // --- ACTIVITY LOGS (Workouts) ---
     fun getLogsForUser(userId: Int): Flow<List<ActivityLog>> = activityLogDao.getLogsForUser(userId)
     fun getLogById(id: Int): Flow<ActivityLog?> = activityLogDao.getLogById(id)
-    suspend fun upsertLog(log: ActivityLog) = activityLogDao.upsertLog(log)
+    suspend fun upsertLog(log: ActivityLog){
+        Log.d(TAG, "Saving/Updating Log: ${log.name} | Type: ${log.type} | Value: ${log.values}")
+        activityLogDao.upsertLog(log)
+    }
     suspend fun deleteLog(log: ActivityLog) = activityLogDao.deleteLog(log)
 
     fun getWorkouts(userId: Int) = activityLogDao.getWorkoutsForUser(userId)
@@ -40,6 +45,7 @@ class ActivityRepository(
 
     // 2. Add Steps (Saves to 'daily_steps' ONLY)
     suspend fun addStepsToToday(userId: Int, newStepsToAdd: Int) {
+        Log.d(TAG, "Adding $newStepsToAdd steps for User ID: $userId")
         val midnight = Calendar.getInstance().apply {
             set(Calendar.HOUR_OF_DAY, 0)
             set(Calendar.MINUTE, 0)

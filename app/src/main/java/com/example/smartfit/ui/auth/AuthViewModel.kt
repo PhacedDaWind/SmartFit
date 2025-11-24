@@ -1,5 +1,7 @@
 package com.example.smartfit.ui.auth
 
+import android.content.ContentValues.TAG
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.smartfit.data.repository.UserRepository
@@ -45,6 +47,7 @@ class AuthViewModel(
 
             // 1. Get the User from Database FIRST
             val user = userRepository.getUserByUsername(username)
+            Log.d(TAG, "Password change request for: $username")
 
             if (user == null) {
                 _authState.value = AuthState.Error("User does not exist")
@@ -60,11 +63,13 @@ class AuthViewModel(
 
             // 3. CHECK: Did the user type the correct Current Password?
             if (user.password != oldPassInput) {
+                Log.w(TAG, "Password change failed: Incorrect current password")
                 _authState.value = AuthState.Error("Incorrect current password")
                 return@launch
             }
 
             // 4. All checks passed -> Update
+            Log.i(TAG, "Password updated successfully")
             userRepository.updatePassword(user.userId, newPassInput)
             _authState.value = AuthState.Success
         }
