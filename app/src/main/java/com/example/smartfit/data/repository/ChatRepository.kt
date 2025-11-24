@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 
-class ChatRepository(private val chatDao: ChatDao) { // Inject DAO
+class ChatRepository(private val chatDao: ChatDao) {
 
     private val generativeModel = GenerativeModel(
         modelName = "gemini-2.5-flash",
@@ -19,11 +19,18 @@ class ChatRepository(private val chatDao: ChatDao) { // Inject DAO
 
     private val systemPrompt = """
         You are SmartFit AI, a fitness coach.
+        
         STRICT RULES:
-        1. Answer DIRECTLY. 
-        2. DO NOT say "Hello" unless asked.
-        3. REQUIRED: If the request implies an image, add this at the end:
-        IMAGE_PROMPT: [keyword]
+        1. Answer the user's question DIRECTLY. 
+        2. DO NOT say "Hello" or "I am SmartFit AI" unless the user specifically asks "Who are you?".
+        3. REQUIRED: If the user asks to SEE something, you MUST describe it in 1-2 sentences BEFORE generating the image prompt.
+        4. REQUIRED: If the request implies an image (like "show me a salad"), add a new line at the very end with this format:
+        IMAGE_PROMPT: [simple keyword for search]
+        
+        Example:
+        User: Show me a salad.
+        AI: Here is a healthy green salad with tomatoes and chicken.
+        IMAGE_PROMPT: healthy chicken salad
     """.trimIndent()
 
     // Get messages from DB for the UI
@@ -39,44 +46,55 @@ class ChatRepository(private val chatDao: ChatDao) { // Inject DAO
             )
 
             // 2. Reconstruct History from DB for Gemini
-            // We fetch the current list from DB to give Gemini memory of previous chats
             val dbHistory = chatDao.getMessagesForUser(userId).first()
 
             val chatHistory = dbHistory.map { msg ->
                 content(role = if (msg.isFromUser) "user" else "model") { text(msg.text) }
             }.toMutableList()
 
-            // Add System Prompt at the very beginning of history
+            // Add System Prompt at the start
             chatHistory.add(0, content(role = "user") { text(systemPrompt) })
             chatHistory.add(1, content(role = "model") { text("Understood.") })
 
-            // 3. Start Chat with History
+            // 3. Start Chat
             val chat = generativeModel.startChat(history = chatHistory)
 
             // 4. Send Message
             val response = chat.sendMessage(userMessage)
             val fullText = response.text ?: "I couldn't understand that."
 
-            // 5. Parse Image & Save AI Response to DB
-            var finalParams = Pair(fullText, null as String?)
+            // 5. Parse Image & Save AI Response
+            var messageText = fullText
+            var imageKeyword: String? = null
 
             if (fullText.contains("IMAGE_PROMPT:")) {
                 val parts = fullText.split("IMAGE_PROMPT:")
-                finalParams = Pair(parts[0].trim(), parts[1].trim())
+                // Part 0 is the text, Part 1 is the keyword
+                if (parts.isNotEmpty()) {
+                    messageText = parts[0].trim()
+                }
+                if (parts.size > 1) {
+                    imageKeyword = parts[1].trim()
+                }
             }
+
+            // --- CRITICAL FIX: Ensure text is never empty ---
+            if (messageText.isBlank() && imageKeyword != null) {
+                messageText = "Here is the image you asked for:"
+            }
+            // ------------------------------------------------
 
             // Save to DB
             chatDao.insertMessage(
                 ChatMessageEntity(
                     userId = userId,
-                    text = finalParams.first,
+                    text = messageText,
                     isFromUser = false,
-                    imageUrl = finalParams.second // Save the keyword if found
+                    imageUrl = imageKeyword
                 )
             )
 
         } catch (e: Exception) {
-            // Save error message to DB so user sees it
             chatDao.insertMessage(
                 ChatMessageEntity(userId = userId, text = "Error: ${e.localizedMessage}", isFromUser = false)
             )
@@ -84,16 +102,13 @@ class ChatRepository(private val chatDao: ChatDao) { // Inject DAO
     }
 
     suspend fun ensureWelcomeMessage(userId: Int) {
-        // 1. Get the current list once
         val currentMessages = chatDao.getMessagesForUser(userId).first()
-
-        // 2. If empty, insert the welcome message
         if (currentMessages.isEmpty()) {
             chatDao.insertMessage(
                 ChatMessageEntity(
                     userId = userId,
                     text = "Hello! I am your SmartFit AI Coach. Ask me for a workout tip or a meal plan! 💪",
-                    isFromUser = false // It's from the AI
+                    isFromUser = false
                 )
             )
         }
