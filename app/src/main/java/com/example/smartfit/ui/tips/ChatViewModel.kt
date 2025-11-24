@@ -1,5 +1,6 @@
 package com.example.smartfit.ui.tips
 
+import android.util.Log // <--- Import
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.smartfit.data.repository.ChatRepository
@@ -21,6 +22,7 @@ class ChatViewModel(
     private val userPreferencesRepository: UserPreferencesRepository
 ) : ViewModel() {
 
+    private val TAG = "ChatViewModel" // <--- Log Tag
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
 
@@ -29,13 +31,12 @@ class ChatViewModel(
     val messages: StateFlow<List<ChatMessage>> = userPreferencesRepository.currentUserId
         .flatMapLatest { userId ->
             if (userId != null) {
+                Log.d(TAG, "Loading chat history for User ID: $userId") // <--- Log
 
-                // --- ADD THIS BLOCK ---
                 // Check and insert welcome message immediately when User ID is found
                 viewModelScope.launch {
                     chatRepository.ensureWelcomeMessage(userId)
                 }
-                // ----------------------
 
                 chatRepository.getMessages(userId).map { entities ->
                     entities.map { entity ->
@@ -43,12 +44,16 @@ class ChatViewModel(
                             try {
                                 val encoded = URLEncoder.encode(keyword, "UTF-8")
                                 "https://image.pollinations.ai/prompt/$encoded"
-                            } catch (e: Exception) { null }
+                            } catch (e: Exception) {
+                                Log.e(TAG, "Error encoding image URL for keyword: $keyword", e) // <--- Log Error
+                                null
+                            }
                         }
                         ChatMessage(entity.text, entity.isFromUser, displayUrl)
                     }
                 }
             } else {
+                Log.d(TAG, "No user logged in. Showing empty chat.") // <--- Log
                 flowOf(emptyList())
             }
         }
@@ -56,12 +61,21 @@ class ChatViewModel(
 
     fun sendMessage(text: String) {
         if (text.isBlank()) return
+
+        Log.d(TAG, "User sending message: $text") // <--- Log
         _isLoading.value = true
 
         viewModelScope.launch {
             val userId = userPreferencesRepository.currentUserId.first()
             if (userId != null) {
-                chatRepository.sendMessage(userId, text)
+                try {
+                    chatRepository.sendMessage(userId, text)
+                    Log.i(TAG, "Message successfully processed by AI") // <--- Log Success
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to send message: ${e.localizedMessage}") // <--- Log Failure
+                }
+            } else {
+                Log.w(TAG, "Cannot send message: User ID is null") // <--- Log Warning
             }
             _isLoading.value = false
         }
