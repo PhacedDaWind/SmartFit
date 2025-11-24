@@ -5,7 +5,11 @@ import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.navigation.compose.ComposeNavigator
 import androidx.navigation.testing.TestNavHostController
+import com.example.smartfit.ui.addedit.AddEditScreen
+import com.example.smartfit.ui.auth.LoginScreen
+import com.example.smartfit.ui.auth.RegisterScreen
 import com.example.smartfit.ui.navigation.AppNavigation
+import com.example.smartfit.ui.profile.ProfileScreen
 import org.junit.Rule
 import org.junit.Test
 
@@ -13,6 +17,53 @@ class NavigationTest {
 
     @get:Rule
     val composeTestRule = createComposeRule()
+
+    @Test
+    fun loginScreen_displaysCorrectContent() {
+        composeTestRule.setContent {
+            LoginScreen(onLoginSuccess = {}, onNavigateToRegister = {}, onNavigateToForgot = {})
+        }
+        composeTestRule.onNodeWithText("Welcome Back!").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Login").assertIsDisplayed()
+        Thread.sleep(2000)
+    }
+
+    @Test
+    fun registerScreen_displaysCorrectContent() {
+        composeTestRule.setContent {
+            RegisterScreen(onRegisterSuccess = {}, onNavigateBack = {})
+        }
+        composeTestRule.onNodeWithText("Create Account").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Sign Up").assertIsDisplayed()
+
+        Thread.sleep(2000)
+    }
+
+    @Test
+    fun profileScreen_displaysContent() {
+        composeTestRule.setContent {
+            ProfileScreen(onLogout = {})
+        }
+        // Matches "App Settings" or "Preferences" depending on your version
+        composeTestRule.onNodeWithText("Dark Mode").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Log Out").assertIsDisplayed()
+
+        Thread.sleep(2000)
+    }
+
+    @Test
+    fun addEditScreen_displaysFormElements() {
+        composeTestRule.setContent {
+            AddEditScreen(onNavigateUp = {})
+        }
+        composeTestRule.onNodeWithText("New Entry").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Workout").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Food").assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription("Save").assertIsDisplayed()
+
+        Thread.sleep(2000)
+    }
+
 
     @Test
     fun fullAppFlow_CompleteJourney_WithPasswordChange() {
