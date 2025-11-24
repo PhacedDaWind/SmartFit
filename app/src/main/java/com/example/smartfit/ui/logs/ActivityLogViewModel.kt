@@ -1,5 +1,6 @@
 package com.example.smartfit.ui.logs
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.smartfit.data.repository.ActivityRepository
@@ -13,6 +14,7 @@ class ActivityLogViewModel(
     private val userPreferencesRepository: UserPreferencesRepository
 ) : ViewModel() {
 
+    private val TAG = "ActivityLogViewModel" // <--- Log Tag
     private val _filterType = MutableStateFlow("All")
     val filterType: StateFlow<String> = _filterType.asStateFlow()
 
@@ -25,12 +27,11 @@ class ActivityLogViewModel(
             Pair(userId, type)
         }.flatMapLatest { (userId, type) ->
             if (userId != null) {
+                Log.d(TAG, "Loading logs with filter: $type") // <--- Log
                 when (type) {
                     "All" -> activityRepository.getLogsForUser(userId)
-                    // UPDATED: Specific queries for Cardio and Strength
-                    "Cardio" -> activityRepository.getLogsByType(userId, "Cardio")
-                    "Strength" -> activityRepository.getLogsByType(userId, "Strength")
-                    "Food" -> activityRepository.getFoodLogs(userId)
+                    "Workout" -> activityRepository.getWorkouts(userId)
+                    "Food & Drinks" -> activityRepository.getFoodLogs(userId)
                     else -> flowOf(emptyList())
                 }
             } else {
@@ -39,6 +40,7 @@ class ActivityLogViewModel(
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     fun updateFilter(newFilter: String) {
+        Log.d(TAG, "Filter updated to: $newFilter") // <--- Log
         _filterType.value = newFilter
     }
 }
