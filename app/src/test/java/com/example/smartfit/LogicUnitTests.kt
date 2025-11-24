@@ -1,5 +1,6 @@
 package com.example.smartfit
 
+import com.example.smartfit.utils.Calculator
 import org.junit.Test
 import org.junit.Assert.*
 
@@ -50,5 +51,19 @@ class LogicUnitTests {
         val stepsOver = 15000
         val progressOver = (stepsOver.toFloat() / goal.toFloat()).coerceIn(0f, 1f)
         assertEquals(1.0f, progressOver, 0.01f)
+    }
+
+    @Test
+    fun calculateBMI_isCorrect() {
+        // 1. GIVEN: A user who is 70kg and 175cm tall
+        val weightKg = 70.0
+        val heightCm = 175.0
+
+        // 2. WHEN: We calculate the BMI using the app's logic
+        val result = Calculator.calculateBMI(weightKg, heightCm)
+
+        // 3. THEN: The result should be exactly 22.86
+        // (Math: 70 / 1.75^2 = 22.857... which rounds up to 22.86)
+        assertEquals(22.86, result, 0.01)
     }
 }
