@@ -46,4 +46,12 @@ class UserRepository(private val userDao: UserDao) {
         // If database returns null, default to 0
         return userDao.getStepGoal(userId).map { it ?: 0 }
     }
+
+    suspend fun getUserByEmail(email: String): User? {
+        return userDao.getUserByEmail(email)
+    }
+
+    suspend fun updatePasswordByEmail(email: String, newPass: String) {
+        userDao.updatePasswordByEmail(email, newPass)
+    }
 }

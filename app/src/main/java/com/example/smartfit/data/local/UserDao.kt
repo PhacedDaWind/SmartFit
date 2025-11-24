@@ -26,4 +26,10 @@ interface UserDao {
 
     @Query("SELECT stepGoal FROM users WHERE userId = :userId")
     fun getStepGoal(userId: Int): Flow<Int?>
+
+    @Query("SELECT * FROM users WHERE email = :email LIMIT 1")
+    suspend fun getUserByEmail(email: String): User?
+
+    @Query("UPDATE users SET password = :newPassword WHERE email = :email")
+    suspend fun updatePasswordByEmail(email: String, newPassword: String)
 }

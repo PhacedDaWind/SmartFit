@@ -8,7 +8,7 @@ import androidx.room.RoomDatabase
 @Database(
     // FIX: Add DailyStep::class to this list so Room knows to create the table
     entities = [ActivityLog::class, User::class, DailyStep::class, ChatMessageEntity::class],
-    version = 10, // Increment this version number (e.g., from 6 to 7)
+    version = 11, // Increment this version number (e.g., from 6 to 7)
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

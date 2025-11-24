@@ -10,6 +10,7 @@ data class User(
     @PrimaryKey(autoGenerate = true)
     val userId: Int = 0, // This is the new Primary Key
     val username: String,
+    val email: String,
     val password: String,
     val stepGoal: Int = 0
 )

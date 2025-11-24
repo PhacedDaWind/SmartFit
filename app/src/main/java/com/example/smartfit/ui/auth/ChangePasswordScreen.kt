@@ -7,17 +7,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Error
-import androidx.compose.material.icons.filled.Key
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.LockReset
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -30,7 +26,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.smartfit.SmartFitApplication
 import com.example.smartfit.ui.theme.ViewModelFactory
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -43,21 +38,23 @@ fun ChangePasswordScreen(
         factory = ViewModelFactory(app.repository, app.userPreferencesRepository, app.userRepository, app.stepSensorRepository)
     )
 
-    var username by remember { mutableStateOf("") }
-    var currentPassword by remember { mutableStateOf("") }
+    var step by remember { mutableIntStateOf(1) }
+    var email by remember { mutableStateOf("") }
+    var otpInput by remember { mutableStateOf("") }
     var newPassword by remember { mutableStateOf("") }
 
     val authState by viewModel.authState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
 
-    // --- SUCCESS HANDLING ---
     LaunchedEffect(authState) {
         when(authState) {
+            is AuthState.OtpSent -> {
+                step = 2
+                viewModel.resetState()
+            }
             is AuthState.Success -> {
-                snackbarHostState.showSnackbar("Password Updated! Redirecting...")
-                // FASTER DELAY (0.5 seconds)
-                delay(500)
+                snackbarHostState.showSnackbar("Password Reset Successfully!")
+                delay(1000)
                 onSuccess()
             }
             is AuthState.Error -> {
@@ -71,25 +68,24 @@ fun ChangePasswordScreen(
     Scaffold(
         snackbarHost = {
             SnackbarHost(hostState = snackbarHostState) { data ->
-                val isSuccess = data.visuals.message.contains("Updated", ignoreCase = true)
-                val bgColor = if (isSuccess) Color(0xFF4CAF50) else MaterialTheme.colorScheme.errorContainer
-                val contentColor = if (isSuccess) Color.White else MaterialTheme.colorScheme.onErrorContainer
-                val icon = if (isSuccess) Icons.Default.CheckCircle else Icons.Default.Error
-
                 Surface(
                     modifier = Modifier.padding(16.dp).fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
-                    color = bgColor,
+                    color = if (data.visuals.message.contains("Success")) Color(0xFF4CAF50) else MaterialTheme.colorScheme.errorContainer,
                     shadowElevation = 6.dp
                 ) {
                     Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(icon, contentDescription = null, tint = contentColor)
+                        Icon(
+                            if (data.visuals.message.contains("Success")) Icons.Default.CheckCircle else Icons.Default.Warning,
+                            null,
+                            tint = if (data.visuals.message.contains("Success")) Color.White else MaterialTheme.colorScheme.onErrorContainer
+                        )
                         Spacer(modifier = Modifier.width(12.dp))
                         Text(
                             text = data.visuals.message,
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Bold,
-                            color = contentColor
+                            color = if (data.visuals.message.contains("Success")) Color.White else MaterialTheme.colorScheme.onErrorContainer
                         )
                     }
                 }
@@ -101,7 +97,12 @@ fun ChangePasswordScreen(
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
+                        // --- FIX: High Contrast Color for Visibility ---
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                            tint = MaterialTheme.colorScheme.primary // Visible on white/light bg
+                        )
                     }
                 },
                 windowInsets = WindowInsets(0.dp)
@@ -110,9 +111,9 @@ fun ChangePasswordScreen(
     ) { p ->
         Box(
             modifier = Modifier
+                .padding(p)
                 .fillMaxSize()
-                .background(Color(0xFF0D1B2A)) // Solid Dark Blue
-                .padding(p),
+                .background(MaterialTheme.colorScheme.background), // White/Theme Bg
             contentAlignment = Alignment.Center
         ) {
             ElevatedCard(
@@ -120,91 +121,98 @@ fun ChangePasswordScreen(
                     .padding(16.dp)
                     .widthIn(max = 480.dp)
                     .fillMaxWidth(),
-                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
             ) {
                 Column(
                     modifier = Modifier.padding(32.dp),
-                    verticalArrangement = Arrangement.Center,
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
+                    // --- HEADER ICON (Changes based on Step) ---
                     Surface(
                         modifier = Modifier.size(80.dp),
                         shape = CircleShape,
                         color = MaterialTheme.colorScheme.secondaryContainer
                     ) {
                         Icon(
-                            imageVector = Icons.Default.LockReset,
+                            imageVector = if (step == 1) Icons.Default.MarkEmailRead else Icons.Default.LockReset,
                             contentDescription = null,
                             modifier = Modifier.padding(20.dp),
                             tint = MaterialTheme.colorScheme.onSecondaryContainer
                         )
                     }
+
                     Spacer(Modifier.height(24.dp))
+
+                    // --- TITLES ---
                     Text(
-                        "Update Password",
+                        text = if (step == 1) "Forgot Password?" else "Reset Password",
                         style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        "Secure your account",
+                        text = if (step == 1) "Enter email to receive OTP code" else "Enter the code and new password",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
                     )
 
                     Spacer(Modifier.height(32.dp))
 
-                    OutlinedTextField(
-                        value = username,
-                        onValueChange = { username = it },
-                        label = { Text("Username") },
-                        leadingIcon = { Icon(Icons.Default.Person, null) },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
-                    )
-                    Spacer(Modifier.height(16.dp))
-
-                    OutlinedTextField(
-                        value = currentPassword,
-                        onValueChange = { currentPassword = it },
-                        label = { Text("Current Password") },
-                        leadingIcon = { Icon(Icons.Default.Lock, null) },
-                        visualTransformation = PasswordVisualTransformation(),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Next),
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        singleLine = true
-                    )
-                    Spacer(Modifier.height(16.dp))
-
-                    OutlinedTextField(
-                        value = newPassword,
-                        onValueChange = { newPassword = it },
-                        label = { Text("New Password") },
-                        leadingIcon = { Icon(Icons.Default.Key, null) },
-                        visualTransformation = PasswordVisualTransformation(),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        singleLine = true
-                    )
-
-                    Spacer(Modifier.height(24.dp))
-
-                    Button(
-                        onClick = {
-                            if (username.isBlank() || currentPassword.isBlank() || newPassword.isBlank()) {
-                                scope.launch { snackbarHostState.showSnackbar("Please fill in all fields") }
-                            } else {
-                                viewModel.changePassword(username, currentPassword, newPassword)
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth().height(50.dp),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Text("Confirm Update", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    // --- STEP 1: EMAIL ---
+                    if (step == 1) {
+                        OutlinedTextField(
+                            value = email,
+                            onValueChange = { email = it },
+                            label = { Text("Email Address") },
+                            leadingIcon = { Icon(Icons.Default.Email, null) },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp),
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Done)
+                        )
+                        Spacer(Modifier.height(24.dp))
+                        Button(
+                            onClick = { viewModel.sendOtp(email) },
+                            modifier = Modifier.fillMaxWidth().height(50.dp),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text("Send Code", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                    // --- STEP 2: OTP + NEW PASS ---
+                    else {
+                        OutlinedTextField(
+                            value = otpInput,
+                            onValueChange = { otpInput = it },
+                            label = { Text("OTP Code") },
+                            leadingIcon = { Icon(Icons.Default.Pin, null) },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp),
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next)
+                        )
+                        Spacer(Modifier.height(16.dp))
+                        OutlinedTextField(
+                            value = newPassword,
+                            onValueChange = { newPassword = it },
+                            label = { Text("New Password") },
+                            leadingIcon = { Icon(Icons.Default.Key, null) },
+                            visualTransformation = PasswordVisualTransformation(),
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp),
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done)
+                        )
+                        Spacer(Modifier.height(24.dp))
+                        Button(
+                            onClick = { viewModel.verifyAndResetPassword(otpInput, newPassword) },
+                            modifier = Modifier.fillMaxWidth().height(50.dp),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text("Reset Password", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
             }

@@ -7,6 +7,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Email // <--- New Icon
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PersonAdd
@@ -40,6 +41,7 @@ fun RegisterScreen(
     )
 
     var username by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") } // <--- New State
     var password by remember { mutableStateOf("") }
 
     val authState by viewModel.authState.collectAsState()
@@ -80,12 +82,7 @@ fun RegisterScreen(
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        // --- FIX: Changed tint to Primary so it is visible on white ---
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
-                            tint = MaterialTheme.colorScheme.primary // <--- VISIBLE COLOR
-                        )
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.primary)
                     }
                 },
                 windowInsets = WindowInsets(0.dp)
@@ -96,7 +93,7 @@ fun RegisterScreen(
             modifier = Modifier
                 .padding(p)
                 .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background), // White/Theme bg
+                .background(MaterialTheme.colorScheme.background),
             contentAlignment = Alignment.Center
         ) {
             ElevatedCard(
@@ -132,7 +129,7 @@ fun RegisterScreen(
 
                     Spacer(Modifier.height(32.dp))
 
-                    // Inputs
+                    // --- USERNAME ---
                     OutlinedTextField(
                         value = username,
                         onValueChange = { username = it },
@@ -146,6 +143,21 @@ fun RegisterScreen(
 
                     Spacer(Modifier.height(16.dp))
 
+                    // --- NEW: EMAIL INPUT ---
+                    OutlinedTextField(
+                        value = email,
+                        onValueChange = { email = it },
+                        label = { Text("Email Address") },
+                        leadingIcon = { Icon(Icons.Default.Email, null) },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next)
+                    )
+
+                    Spacer(Modifier.height(16.dp))
+
+                    // --- PASSWORD ---
                     OutlinedTextField(
                         value = password,
                         onValueChange = { password = it },
@@ -160,13 +172,15 @@ fun RegisterScreen(
 
                     Spacer(Modifier.height(32.dp))
 
-                    // Button
+                    // --- BUTTON ---
                     Button(
                         onClick = {
-                            if (username.isBlank() || password.isBlank()) {
+                            // Updated Validation
+                            if (username.isBlank() || email.isBlank() || password.isBlank()) {
                                 scope.launch { snackbarHostState.showSnackbar("Please fill in all fields") }
                             } else {
-                                viewModel.register(username, password)
+                                // Call updated register function
+                                viewModel.register(username, email, password)
                             }
                         },
                         modifier = Modifier.fillMaxWidth().height(50.dp),
