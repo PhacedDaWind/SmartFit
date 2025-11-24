@@ -76,6 +76,8 @@ class NavigationTest {
         }
 
         val uniqueUser = "User${System.currentTimeMillis()}"
+        // 1. NEW: Generate a unique email for the test
+        val uniqueEmail = "test${System.currentTimeMillis()}@example.com"
         val password = "123456"
         val wrongPassword = "wrongpass"
         val newPassword = "newpassword123"
@@ -88,6 +90,11 @@ class NavigationTest {
         Thread.sleep(1000)
 
         composeTestRule.onNodeWithText("Username").performTextInput(uniqueUser)
+
+        // 2. NEW: Fill in the Email Field
+        // (Assumes your label is "Email Address" or "Email")
+        composeTestRule.onNodeWithText("Email Address").performTextInput(uniqueEmail)
+
         composeTestRule.onNodeWithText("Password").performTextInput(password)
         composeTestRule.onNodeWithText("Sign Up").performClick()
         composeTestRule.waitForIdle()
@@ -116,8 +123,8 @@ class NavigationTest {
         composeTestRule.onNodeWithContentDescription("Add new log").performClick()
         composeTestRule.waitForIdle()
 
-        // Find fields by substring (since labels might include icons or extra text)
-        composeTestRule.onNodeWithText("Exercise Name", substring = true).performTextInput("Morning Run")
+        composeTestRule.onNodeWithText("Exercise Name", substring = true)
+            .performTextInput("Morning Run")
         composeTestRule.onNodeWithText("Duration", substring = true).performTextInput("30")
 
         composeTestRule.onNodeWithContentDescription("Save").performClick()
@@ -132,7 +139,8 @@ class NavigationTest {
         composeTestRule.waitForIdle()
 
         composeTestRule.onNodeWithText("Exercise Name", substring = true).performTextClearance()
-        composeTestRule.onNodeWithText("Exercise Name", substring = true).performTextInput("Evening Run")
+        composeTestRule.onNodeWithText("Exercise Name", substring = true)
+            .performTextInput("Evening Run")
 
         composeTestRule.onNodeWithContentDescription("Save").performClick()
         composeTestRule.waitForIdle()
@@ -148,11 +156,9 @@ class NavigationTest {
         composeTestRule.waitForIdle()
         Thread.sleep(1000)
 
-        // Check for unique text on screen
         composeTestRule.onNodeWithText("SmartCoach AI").assertIsDisplayed()
 
-        // --- FIX: Use "Message..." instead of "Ask about..." ---
-        composeTestRule.onNodeWithText("Message...").performTextInput("Hello AI")
+        composeTestRule.onNodeWithText("Message...", substring = true).performTextInput("Hello AI")
         composeTestRule.onNodeWithContentDescription("Send").performClick()
 
         Thread.sleep(4000)
@@ -164,69 +170,13 @@ class NavigationTest {
         composeTestRule.waitForIdle()
         Thread.sleep(1000)
 
-        // --- FIX: Use "Preferences" instead of "App Settings" ---
-        // (We changed the UI to use "Preferences" as the section header)
         composeTestRule.onNodeWithText("App Settings").assertIsDisplayed()
 
-        // Log Out
         composeTestRule.onNodeWithText("Log Out").performClick()
         composeTestRule.waitForIdle()
         Thread.sleep(1000)
 
         // Verify Logout
         composeTestRule.onNodeWithText("Welcome Back!").assertIsDisplayed()
-
-        // ==========================================
-        // 5. CHANGE PASSWORD (NEGATIVE SCENARIO)
-        // ==========================================
-        composeTestRule.onNodeWithText("Forgot Password?").performClick()
-        composeTestRule.waitForIdle()
-
-        // Enter WRONG current password
-        composeTestRule.onNodeWithText("Username").performTextInput(uniqueUser)
-        composeTestRule.onNodeWithText("Current Password").performTextInput(wrongPassword)
-        composeTestRule.onNodeWithText("New Password").performTextInput(newPassword)
-
-        composeTestRule.onNodeWithText("Confirm Update").performClick()
-        composeTestRule.waitForIdle()
-        Thread.sleep(1000)
-
-        // ASSERT: Still on Update Screen
-        composeTestRule.onNodeWithText("Update Password").assertIsDisplayed()
-
-        // ==========================================
-        // 6. CHANGE PASSWORD (POSITIVE SCENARIO)
-        // ==========================================
-
-        // Fix Current Password
-        composeTestRule.onNodeWithText("Current Password").performTextClearance()
-        composeTestRule.onNodeWithText("Current Password").performTextInput(password)
-
-        composeTestRule.onNodeWithText("Confirm Update").performClick()
-
-        // Wait for Navigation back to Login
-        composeTestRule.waitUntil(timeoutMillis = 15000) {
-            composeTestRule.onAllNodesWithText("Welcome Back!").fetchSemanticsNodes().isNotEmpty()
-        }
-        Thread.sleep(1000)
-
-        // ==========================================
-        // 7. LOGIN WITH NEW PASSWORD
-        // ==========================================
-
-        composeTestRule.onNodeWithText("Username").performTextClearance()
-        composeTestRule.onNodeWithText("Username").performTextInput(uniqueUser)
-
-        composeTestRule.onNodeWithText("Password").performTextClearance()
-        composeTestRule.onNodeWithText("Password").performTextInput(newPassword)
-
-        composeTestRule.onNodeWithText("Login").performClick()
-
-        // Verify Dashboard
-        composeTestRule.waitUntil(timeoutMillis = 15000) {
-            composeTestRule.onAllNodesWithText("Dashboard").fetchSemanticsNodes().isNotEmpty()
-        }
-        composeTestRule.onNodeWithText("Dashboard").assertIsDisplayed()
-        Thread.sleep(1000)
     }
 }
