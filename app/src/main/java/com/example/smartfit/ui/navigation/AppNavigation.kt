@@ -120,10 +120,10 @@ fun AppNavigation(
             composable(AuthRoutes.REGISTER) {
                 RegisterScreen(
                     onRegisterSuccess = {
-                        navController.popBackStack()
+                        navController.popBackStack(AuthRoutes.LOGIN, inclusive = false)
                     },
                     onNavigateBack = {
-                        navController.popBackStack()
+                        navController.popBackStack(AuthRoutes.LOGIN, inclusive = false)
                     }
                 )
             }
@@ -131,10 +131,10 @@ fun AppNavigation(
             composable(AuthRoutes.FORGOT_PASSWORD) {
                 ChangePasswordScreen(
                     onSuccess = {
-                        navController.popBackStack()
+                        navController.popBackStack(AuthRoutes.LOGIN, inclusive = false)
                     },
                     onNavigateBack = {
-                        navController.popBackStack()
+                        navController.popBackStack(AuthRoutes.LOGIN, inclusive = false)
                     }
                 )
             }
