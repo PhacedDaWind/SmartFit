@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Calendar
+import java.util.Date
 import java.util.Locale
 
 data class HomeStats(
@@ -55,6 +56,11 @@ class HomeViewModel(
         fetchUsername()
     }
 
+    private fun formatForLog(timestamp: Long): String {
+        val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
+        return sdf.format(Date(timestamp))
+    }
+
     private fun fetchUsername() {
         viewModelScope.launch {
             userPreferencesRepository.currentUserId.collect { userId ->
@@ -75,7 +81,7 @@ class HomeViewModel(
     }
 
     fun updateDate(newTimestamp: Long) {
-        Log.d(TAG, "User selected specific date: $newTimestamp") // <--- Log
+        Log.d(TAG, "User selected date: $newTimestamp (${formatForLog(newTimestamp)})")// <--- Log
         _currentDate.value = newTimestamp
     }
 
@@ -143,7 +149,12 @@ class HomeViewModel(
                     val endTime = timeRange.second
                     updateDateLabel(filter, startTime)
 
-                    Log.d(TAG, "Fetching stats for range: $startTime to $endTime") // <--- Log
+                    Log.d(
+                        TAG,
+                        "Fetching stats for range: $startTime (${formatForLog(startTime)}) to $endTime (${
+                            formatForLog(endTime)
+                        })"
+                    ) // <--- Log
 
                     combine(
                         activityRepository.getLogsBetween(userId, startTime, endTime),
@@ -173,7 +184,10 @@ class HomeViewModel(
                 }
             }
         }.onEach {
-            Log.d(TAG, "UI State Updated: Steps=${it.steps}, Burned=${it.totalBurned}, Intake=${it.foodCalories}\"") // <--- Log
+            Log.d(
+                TAG,
+                "UI State Updated: Steps=${it.steps}, Burned=${it.totalBurned}, Intake=${it.foodCalories}\""
+            ) // <--- Log
             _stats.value = it
         }.launchIn(viewModelScope)
     }
@@ -182,14 +196,20 @@ class HomeViewModel(
         val calendar = Calendar.getInstance()
         calendar.timeInMillis = date
         if (filter == "Daily") {
-            calendar.set(Calendar.HOUR_OF_DAY, 0); calendar.set(Calendar.MINUTE, 0); calendar.set(Calendar.SECOND, 0); calendar.set(Calendar.MILLISECOND, 0)
+            calendar.set(Calendar.HOUR_OF_DAY, 0); calendar.set(Calendar.MINUTE, 0); calendar.set(
+                Calendar.SECOND,
+                0
+            ); calendar.set(Calendar.MILLISECOND, 0)
             val start = calendar.timeInMillis
             calendar.add(Calendar.DAY_OF_YEAR, 1)
             val end = calendar.timeInMillis
             return Pair(start, end)
         } else {
             calendar.set(Calendar.DAY_OF_MONTH, 1)
-            calendar.set(Calendar.HOUR_OF_DAY, 0); calendar.set(Calendar.MINUTE, 0); calendar.set(Calendar.SECOND, 0); calendar.set(Calendar.MILLISECOND, 0)
+            calendar.set(Calendar.HOUR_OF_DAY, 0);
+            calendar.set(Calendar.MINUTE, 0);
+            calendar.set(Calendar.SECOND, 0);
+            calendar.set(Calendar.MILLISECOND, 0)
             val start = calendar.timeInMillis
             calendar.add(Calendar.MONTH, 1)
             val end = calendar.timeInMillis
@@ -202,8 +222,7 @@ class HomeViewModel(
         val sdf = SimpleDateFormat(format, Locale.getDefault())
         val now = System.currentTimeMillis()
         val isToday = (now - startTime) < 86400000 && (now >= startTime)
-        if (filter == "Daily" && isToday) _dateLabel.value = "Today" else _dateLabel.value = sdf.format(startTime)
+        if (filter == "Daily" && isToday) _dateLabel.value = "Today" else _dateLabel.value =
+            sdf.format(startTime)
     }
-
-    fun simulateSteps(amount: Int) {}
-    }
+}
